@@ -523,10 +523,11 @@ if d_sc_start>0 and rd_sc_start>0 and cli_sc_start>0:
     # Replace all data blocks at once
     block_start = d_sc_start
     block_end   = cli_sc_end
-    new_block = (f'<script>\n{d_js}\n</script>\n'
-                 f'<script>\n{rd_js}\n</script>\n'
-                 + (f'<script>\nvar CONC={};\n</script>\n' if conc_start>0 else '')
-                 + f'<script>\n{cli_js}\n</script>')
+    conc_block = '<script>\nvar CONC={};\n</script>\n' if conc_start>0 else ''
+    new_block = ('<script>\n'+d_js+'\n</script>\n'
+                 '<script>\n'+rd_js+'\n</script>\n'
+                 + conc_block
+                 + '<script>\n'+cli_js+'\n</script>')
     html = html[:block_start] + new_block + html[block_end:]
     print("  Datos principales reemplazados")
 else:
