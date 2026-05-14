@@ -508,30 +508,47 @@ if not os.path.exists(dash_path):
 with open(dash_path,'r',encoding='utf-8') as f:
     html = f.read()
 
-# Replace D script
-d_sc_start  = html.find('<script>\nvar D={}')
-d_sc_end    = html.find('</script>', d_sc_start) + len('</script>')
-rd_sc_start = html.find('<script>\nvar RD={}')
-rd_sc_end   = html.find('</script>', rd_sc_start) + len('</script>')
-# Find CONC block
-conc_start  = html.find('<script>\nvar CONC=')
-conc_end    = html.find('</script>', conc_start) + len('</script>') if conc_start>0 else -1
-cli_sc_start= html.find('<script>\nvar CLI={}')
-cli_sc_end  = html.find('</script>', cli_sc_start) + len('</script>')
+# Find the data block - try multiple patterns
+def find_data_block(html):
+    """Find the start and end of the main data script block"""
+    patterns = [
+        '<script>\nvar D={};',
+        '<script>\nvar D={',
+        '<script>\r\nvar D={',
+    ]
+    for pat in patterns:
+        pos = html.find(pat)
+        if pos >= 0:
+            end = html.find('</script>', pos) + len('</script>')
+            return pos, end
+    return -1, -1
 
-if d_sc_start>0 and rd_sc_start>0 and cli_sc_start>0:
-    # Replace all data blocks at once
-    block_start = d_sc_start
-    block_end   = cli_sc_end
-    conc_block = '<script>\nvar CONC={};\n</script>\n' if conc_start>0 else ''
-    new_block = ('<script>\n'+d_js+'\n</script>\n'
-                 '<script>\n'+rd_js+'\n</script>\n'
-                 + conc_block
-                 + '<script>\n'+cli_js+'\n</script>')
-    html = html[:block_start] + new_block + html[block_end:]
-    print("  Datos principales reemplazados")
+d_sc_start, d_sc_end = find_data_block(html)
+
+if d_sc_start > 0:
+    new_data = '<script>\n' + d_js + '\n' + rd_js + '\n' + cli_js + '\n</script>'
+    html = html[:d_sc_start] + new_data + html[d_sc_end:]
+    print(f"  Datos D+RD+CLI reemplazados ({d_sc_end-d_sc_start:,} -> {len(new_data):,} chars)")
 else:
-    print("  ADVERTENCIA: no se encontraron bloques de datos para reemplazar")
+    # Last resort: inject before the main JS script
+    main_js_pos = html.find('<script>\n\n\n// ===== AUTH =====')
+    if main_js_pos < 0:
+        main_js_pos = html.find('<script>\nvar TABS=')
+    if main_js_pos < 0:
+        main_js_pos = html.find('<script>\n\nvar TABS=')
+    if main_js_pos > 0:
+        new_data = '<script>\n' + d_js + '\n' + rd_js + '\n' + cli_js + '\n</script>\n'
+        html = html[:main_js_pos] + new_data + html[main_js_pos:]
+        print("  Datos D+RD+CLI inyectados antes del script principal")
+    else:
+        print("  ADVERTENCIA: no se pudo inyectar datos - verificar formato del HTML")
+
+# Remove old CONC block if exists (datos de ejemplo)
+conc_start = html.find('<script>\nvar CONC=')
+if conc_start > 0:
+    conc_end = html.find('</script>', conc_start) + len('</script>')
+    html = html[:conc_start] + html[conc_end:]
+    print("  CONC de ejemplo eliminado")
 
 # Replace GUIA_DATA in guia-script deferred
 guia_sc_start = html.find('<script id="guia-script"')
@@ -547,9 +564,17 @@ if old_gd:
     html = html[:guia_sc_start] + new_guia_block + html[guia_sc_end:]
     print("  GUIA_DATA y VEND_STATS actualizados")
 
-# Stamp fecha
-fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
-html = re.sub(r'Cartones \(.*?\)', f'Cartones ({datetime.now().strftime("%B %Y")})', html)
+# Stamp periodo from data
+if len(va) > 0 and 'Fecha' in va.columns:
+    mes = va['Fecha'].dt.month.mode()[0] if len(va) > 0 else datetime.now().month
+    anio = va['Fecha'].dt.year.mode()[0] if len(va) > 0 else datetime.now().year
+    meses_es = {1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio',
+                7:'Julio',8:'Agosto',9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre'}
+    periodo = f"{meses_es.get(int(mes),'?')} {int(anio)}"
+else:
+    periodo = datetime.now().strftime("%B %Y")
+
+html = re.sub(r'Cartones \(.*?\)', f'Cartones ({periodo})', html)
 
 # No-cache meta
 no_cache = ('<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">\n'
