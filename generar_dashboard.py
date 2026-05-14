@@ -105,6 +105,25 @@ if vc_path:
     vc['chofer']   = vc['chofer'].fillna('Sin chofer').str.strip() if 'chofer' in vc.columns else 'Sin chofer'
     vc['proveedor']= vc['proveedor'].fillna('Sin proveedor').str.strip() if 'proveedor' in vc.columns else 'Sin proveedor'
     print(f"  Venta actual: {len(vc):,} filas")
+    # Preparar columnas faltantes en vc si no existen
+    if 'motivodev' not in vc.columns: vc['motivodev'] = None
+    if 'reparto' not in vc.columns: vc['reparto'] = None
+    if 'Razon_Social' not in vc.columns and 'razon_social' in vc.columns:
+        vc['Razon_Social'] = vc['razon_social']
+    if 'Direccion' not in vc.columns and 'direccion' in vc.columns:
+        vc['Direccion'] = vc['direccion']
+    if 'localidad' not in vc.columns: vc['localidad'] = None
+    if 'Comprobante' not in vc.columns: vc['Comprobante'] = ''
+    vc['motivodev'] = pd.to_numeric(vc['motivodev'], errors='coerce')
+    vc['Fecha']     = pd.to_datetime(vc['Fecha'], errors='coerce')
+    vc['fecha_str'] = vc['Fecha'].dt.strftime('%Y-%m-%d')
+    vc['reparto']   = pd.to_numeric(vc['reparto'], errors='coerce')
+    vc['camion']    = pd.to_numeric(vc['camion'],  errors='coerce').fillna(0) if 'camion' in vc.columns else 0
+
+# Usar venta_actual para dashboard operativo (Ventas, Rutas, Rechazos)
+# Mantener venta_anterior solo para historial de unidades en GUIA_DATA
+va_hist = va.copy() if len(va) > 0 else pd.DataFrame()
+va = vc.copy() if len(vc) > 0 else va  # operativo lee de actual
 
 def get_prov_name(code):
     try: return art_prov.get(int(code), 'Sin proveedor')
@@ -405,7 +424,7 @@ if mc_path and len(vc)>0:
 
     vc_v=vc[vc['tipo_venta']=='Venta'].copy() if 'tipo_venta' in vc.columns else vc.copy()
     vc_v['Cliente']=pd.to_numeric(vc_v['Cliente'],errors='coerce')
-    va_v=va[va['tipo_venta']=='Venta'].copy() if len(va)>0 else pd.DataFrame()
+    va_v=va_hist[va_hist['tipo_venta']=='Venta'].copy() if len(va_hist)>0 else pd.DataFrame()
     if len(va_v)>0: va_v['Cliente']=pd.to_numeric(va_v['Cliente'],errors='coerce')
 
     for _,row in mc.iterrows():
