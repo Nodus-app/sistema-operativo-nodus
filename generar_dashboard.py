@@ -355,9 +355,11 @@ if len(va)>0:
     total_bol_all=len(bol2); total_bol_rej=len(bol_dev2)
     total_imp_rej=float(bol_dev2['importe_abs'].sum())
     total_imp_venta=float(va[va['tipo_venta']=='Venta']['Importe'].sum())
+    cam_imp = round(float(cam['Importe'].sum()) if len(cam)>0 else 0, 0)
     rej_kpis={'imp_venta':round(total_imp_venta,0),'imp_dev':round(total_imp_rej,0),
-              'imp_cam':round(float(cam['Importe'].sum()) if 'cam' in dir() else 0,0) if len(cam)>0 else 0,
+              'imp_cam':cam_imp,
               'pct_rechazo':round(total_imp_rej/total_imp_venta,4) if total_imp_venta else 0,
+              'pct_cambio':round(cam_imp/total_imp_venta,4) if total_imp_venta else 0,
               'clientes_afectados':int(bol_dev2['cliente'].nunique()),
               'boletas_rej':total_bol_rej,'total_boletas':total_bol_all,
               'reincidentes':len(reinc_list)}
@@ -495,11 +497,35 @@ def make_chunks(var_name, data, chunk=8000):
         return f'var {var_name}={j};'
 
 # Build data object
+# Venta $ per proveedor (for % rechazo by proveedor)
+venta_prov = {}
+if len(va) > 0:
+    vv = va[va['tipo_venta']=='Venta']
+    vp_grp = vv.groupby('proveedor')['Importe'].sum()
+    venta_prov = {str(p): round(float(v),0) for p,v in vp_grp.items()}
+
+# Valorizado deposito: vencido and consumo from movimientos
+vencido_imp = 0.0
+consumo_u   = 0
+consumo_imp = 0.0
+if mov_path and 'mov' in dir():
+    ven = mov[mov['stockmov_tipo']=='VEN'].copy() if 'VEN' in mov['stockmov_tipo'].values else pd.DataFrame()
+    if len(ven) > 0:
+        ven['cu2'] = pd.to_numeric(ven['costo'], errors='coerce').fillna(0)
+        ven['u2']  = ven['stockmov_cantidad'].abs()
+        vencido_imp = round(float((ven['u2']*ven['cu2']).sum()), 2)
+    # Consumo = CON with positive quantity (sobrantes already handled in merma)
+    # Actually consumo interno would be a separate tipo - use what's available
+    consumo_u   = int(con_pos['u'].sum()) if 'con_pos' in dir() and len(con_pos)>0 else 0
+    consumo_imp = round(float(con_pos['tot'].sum()), 2) if 'con_pos' in dir() and len(con_pos)>0 else 0.0
+
 main_data = {
     'cartones':cart_records,'roturas':rot_records,'rot_res':rot_resumen,
     'merma_prov':merma_prov,'merma_det':merma_det,'merma_cross':merma_cross,
     'merma_res':merma_res,'venta':venta_list,'provs':provs,
-    'rec_prov':rec_prov,'cam_prov':cam_prov,'pepsico_ind':pepsico_ind,'routes':route_index
+    'rec_prov':rec_prov,'cam_prov':cam_prov,'pepsico_ind':pepsico_ind,
+    'routes':route_index,'venta_prov':venta_prov,
+    'vencido_imp':vencido_imp,'consumo_u':consumo_u,'consumo_imp':consumo_imp
 }
 rej_data = {
     'kpis':rej_kpis,'gescom':gescom_rechazos,'by_motivo':by_motivo_list,
