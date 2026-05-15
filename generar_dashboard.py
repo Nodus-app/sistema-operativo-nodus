@@ -313,6 +313,47 @@ if len(va)>0:
     provs=sorted(df_v['proveedor'].dropna().str.strip().unique().tolist())
     print(f"  Ventas: {len(venta_list)} choferes, {len(bol_dev)} boletas rechazadas")
 
+# ── METRICAS POR PROVEEDOR (efectividad entrega, rechazo por comprobante) ─────
+def build_prov_metrics_fn(df_p):
+    if df_p.empty: return None
+    comp_cls = df_p.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
+    comp_cls['all_dev']   = comp_cls['tipo_venta'].apply(lambda ts: all(t=='Devolucion' for t in ts) and len(ts)>0)
+    comp_cls['has_venta'] = comp_cls['tipo_venta'].apply(lambda ts: 'Venta' in ts)
+    fac  = int(comp_cls['has_venta'].sum())
+    no_e = int(comp_cls['all_dev'].sum())
+    rej_comps = comp_cls[comp_cls['all_dev']]['Comprobante'].tolist()
+    venta = float(df_p[df_p['tipo_venta']=='Venta']['Importe'].sum())
+    rec   = float(df_p[df_p['Comprobante'].isin(rej_comps)]['Importe'].sum())
+    cam   = float(df_p[df_p['tipo_venta']=='Cambio']['Importe'].sum())
+    efect = round(fac/(fac+no_e),4) if (fac+no_e)>0 else 0
+    return {
+        'venta': round(venta,0), 'rec_imp': round(rec,0),
+        'rec_pct': round(abs(rec)/venta,4) if venta>0 else 0,
+        'cam_imp': round(abs(cam),0),
+        'cam_pct': round(abs(cam)/venta,4) if venta>0 else 0,
+        'fac': fac, 'no_e': no_e, 'efect': efect
+    }
+
+prov_metrics_list = []
+chofer_prov_map = {}
+
+for p in sorted(va['proveedor'].dropna().str.strip().unique()):
+    df_p = va[va['proveedor'].str.strip()==p]
+    m = build_prov_metrics_fn(df_p)
+    if m and m['venta']>0:
+        prov_metrics_list.append({'prov':str(p), **m})
+
+# Per chofer per proveedor
+for ch, df_ch in va.groupby('chofer'):
+    ch_key = str(ch).strip()
+    chofer_prov_map[ch_key] = []
+    for p, df_cp in df_ch.groupby('proveedor'):
+        m = build_prov_metrics_fn(df_cp.reset_index(drop=True))
+        if m and m['venta']>0:
+            chofer_prov_map[ch_key].append({'prov':str(p).strip(), **m})
+
+print(f"  Metricas por proveedor: {len(prov_metrics_list)} proveedores")
+
 # ── RECHAZOS GESCOM ────────────────────────────────────────────────────────────
 gescom_rechazos=[]
 by_motivo_list=[]
@@ -558,7 +599,8 @@ main_data = {
     'merma_res':merma_res,'venta':venta_list,'provs':provs,
     'rec_prov':rec_prov,'cam_prov':cam_prov,'pepsico_ind':pepsico_ind,
     'routes':route_index,'venta_prov':venta_prov,
-    'vencido_imp':vencido_imp,'consumo_u':consumo_u,'consumo_imp':consumo_imp
+    'vencido_imp':vencido_imp,'consumo_u':consumo_u,'consumo_imp':consumo_imp,
+    'prov_metrics':prov_metrics_list,'chofer_prov':chofer_prov_map
 }
 rej_data = {
     'kpis':rej_kpis,'gescom':gescom_rechazos,'by_motivo':by_motivo_list,
