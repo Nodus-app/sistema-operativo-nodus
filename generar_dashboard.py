@@ -214,11 +214,25 @@ if mov_path:
     mp = con_neg.groupby('prov').agg(u=('u','sum'),tot=('tot','sum')).reset_index()
     merma_prov = [{'prov':str(r['prov']),'u':int(r['u']),'tot':round(float(r['tot']),2)}
                    for _,r in mp.sort_values('tot',ascending=False).iterrows()]
+    # Get fecha range for movimientos period label
+    if mov_fecha_col and mov_fecha_col in con.columns:
+        con_fechas = pd.to_datetime(con[mov_fecha_col], errors='coerce').dropna()
+        if len(con_fechas):
+            fecha_desde = con_fechas.min().strftime('%d/%m/%Y')
+            fecha_hasta = con_fechas.max().strftime('%d/%m/%Y')
+            periodo_con = f"{fecha_desde} - {fecha_hasta}"
+        else:
+            periodo_con = periodo_mov
+    else:
+        periodo_con = periodo_mov
+
     det_neg = [{'desc':str(r['descripcion']),'prov':str(r['prov']),'u':int(r['u']),
-                'cu':round(float(r['cu']),2),'tot':round(float(r['tot']),2),'tipo':'faltante'}
+                'cu':round(float(r['cu']),2),'tot':round(float(r['tot']),2),
+                'tipo':'faltante','fecha':periodo_con}
                for _,r in con_neg.iterrows()]
     det_pos = [{'desc':str(r['descripcion']),'prov':str(r['prov']),'u':int(r['u']),
-                'cu':round(float(r['cu']),2),'tot':round(float(r['tot']),2),'tipo':'sobrante'}
+                'cu':round(float(r['cu']),2),'tot':round(float(r['tot']),2),
+                'tipo':'sobrante','fecha':periodo_con}
                for _,r in con_pos.iterrows()]
     merma_det = sorted(det_neg+det_pos, key=lambda x:x['desc'])
     merma_res = {'tot_faltante':round(float(con_neg['tot'].sum()),2),
@@ -331,9 +345,9 @@ if len(va)>0:
             'chofer':str(r['chofer']),'motivo':str(r['motivo_desc']),
             'imp':round(float(r['importe_abs']),0)})
 
-    bm=dev.groupby('motivo_desc').agg(lineas=('Importe','count'),isum=('Importe','sum')).reset_index()
+    bm=dev.groupby('motivo_desc').agg(lineas=('Importe','count'),isum=('Importe','sum'),uds=('Cantidad','sum')).reset_index()
     bm['isum']=bm['isum'].abs()
-    by_motivo_list=[{'motivo':r['motivo_desc'],'lineas':int(r['lineas']),'imp':round(float(r['isum']),0)}
+    by_motivo_list=[{'motivo':r['motivo_desc'],'lineas':int(r['lineas']),'uds':int(abs(r['uds'])),'imp':round(float(r['isum']),0)}
                     for _,r in bm.sort_values('isum',ascending=False).iterrows()]
 
     bc=bol_dev2.groupby('chofer').agg(n_rej=('Comprobante','count'),isum=('importe_abs','sum')).reset_index()
@@ -520,15 +534,23 @@ vencido_imp = 0.0
 consumo_u   = 0
 consumo_imp = 0.0
 if mov_path and 'mov' in dir():
-    ven = mov[mov['stockmov_tipo']=='VEN'].copy() if 'VEN' in mov['stockmov_tipo'].values else pd.DataFrame()
-    if len(ven) > 0:
+    # Vencido: tipo VEN
+    ven_types = mov['stockmov_tipo'].unique().tolist() if 'stockmov_tipo' in mov.columns else []
+    if 'VEN' in ven_types:
+        ven = mov[mov['stockmov_tipo']=='VEN'].copy()
         ven['cu2'] = pd.to_numeric(ven['costo'], errors='coerce').fillna(0)
         ven['u2']  = ven['stockmov_cantidad'].abs()
         vencido_imp = round(float((ven['u2']*ven['cu2']).sum()), 2)
-    # Consumo = CON with positive quantity (sobrantes already handled in merma)
-    # Actually consumo interno would be a separate tipo - use what's available
-    consumo_u   = int(con_pos['u'].sum()) if 'con_pos' in dir() and len(con_pos)>0 else 0
-    consumo_imp = round(float(con_pos['tot'].sum()), 2) if 'con_pos' in dir() and len(con_pos)>0 else 0.0
+    # Consumo interno: tipo TRA + motivo contiene 'consumo'
+    if 'TRA' in ven_types and 'stockmov_motivo' in mov.columns:
+        cons = mov[(mov['stockmov_tipo']=='TRA') &
+                   mov['stockmov_motivo'].str.lower().str.contains('consumo',na=False) &
+                   (mov['stockmov_cantidad']<0)].copy()
+        if len(cons) > 0:
+            cons['cu2'] = pd.to_numeric(cons['costo'], errors='coerce').fillna(0)
+            cons['u2']  = cons['stockmov_cantidad'].abs()
+            consumo_u   = int(cons['u2'].sum())
+            consumo_imp = round(float((cons['u2']*cons['cu2']).sum()), 2)
 
 main_data = {
     'cartones':cart_records,'roturas':rot_records,'rot_res':rot_resumen,
