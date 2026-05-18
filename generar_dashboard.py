@@ -169,6 +169,14 @@ for rep_id, grp in vc.groupby('reparto'):
     pep  = float(vgrp[vgrp['proveedor']==PEPSICO]['Importe'].sum())
     mol  = float(vgrp[vgrp['proveedor']==MOLINOS]['Importe'].sum())
     sof  = float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum())
+    # Peso: cantxcap (kg/unit) x cantidad, capped at 2kg for Pepsico, 3kg for others
+    if 'cantxcap' in vgrp.columns:
+        cap_kg = vgrp['proveedor'].apply(lambda p: 2.0 if p==PEPSICO else 3.0)
+        kg_unit= pd.to_numeric(vgrp['cantxcap'], errors='coerce').fillna(0).clip(0, None)
+        kg_unit= kg_unit.where(kg_unit<=cap_kg, cap_kg)
+        kg_tot = float((kg_unit * vgrp['Cantidad'].abs()).sum())
+    else:
+        kg_tot = 0.0
     clientes = []
     for cli_id, cg in grp.groupby('Cliente'):
         tipos = list(cg['tipo_venta'].fillna('Venta'))
@@ -183,7 +191,7 @@ for rep_id, grp in vc.groupby('reparto'):
         clientes.append([si(cli_id),raz,dir2,loc,cmp,imp,cnt,fl])
     rej=sum(1 for c in clientes if c[7]>=1)
     route_index.append({'rep':si(rep_id),'ch':ch,'f':str(fec),'cam':cam,
-        'n':len(clientes),'tot':round(tot,0),'rej':rej,
+        'n':len(clientes),'tot':round(tot,0),'rej':rej,'kg':round(kg_tot,1),
         'pep':round(pep,0),'mol':round(mol,0),'sof':round(float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum()),0),
         'oth':round(tot-pep-mol-float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum()),0)})
     client_map[str(si(rep_id))]=clientes
