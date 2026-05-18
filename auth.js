@@ -211,11 +211,20 @@ function renderRejAll(){
   }
   document.getElementById('rej-ch-tb').innerHTML=chData.length?
     chData.map(function(c){
+      // Rechazo% = $ devolucion / $ venta (from chofer_prov)
+      var cpList = (D_CHPROV[c.ch]||[]).filter(function(m){return !selProv||m.prov===selProv;});
+      var venta_ch = cpList.reduce(function(s,m){return s+m.venta;},0);
+      var rec_ch   = cpList.reduce(function(s,m){return s+m.rec;},0);
+      var pctRec   = venta_ch>0 ? rec_ch/venta_ch : 0;
+      // Efectividad = fac / (fac + no_e)
+      var fac_ch = cpList.reduce(function(s,m){return s+m.fac;},0);
+      var noe_ch = cpList.reduce(function(s,m){return s+m.no_e;},0);
+      var efect  = fac_ch>0 ? fac_ch/(fac_ch+noe_ch) : 0;
       return '<tr><td><strong>'+c.ch+'</strong></td>'+
-        '<td style="text-align:right;color:#ef4444">'+c.n+'</td>'+
-        '<td style="text-align:right">'+c.tot+'</td>'+
-        '<td>'+PR(c.pct,'#ef4444',0.15)+' '+P(c.pct)+'</td>'+
-        '<td style="text-align:right;color:#ef4444">$'+F(c.imp)+'</td></tr>';
+        '<td style="text-align:right">$'+F(venta_ch)+'</td>'+
+        '<td style="text-align:right;color:#ef4444">$'+F(rec_ch)+'</td>'+
+        '<td>'+PR(pctRec,'#ef4444',0.05)+' '+P2(pctRec)+'</td>'+
+        '<td>'+P(efect)+'</td></tr>';
     }).join(''):'<tr><td colspan="5" class="empty">Sin datos</td></tr>';
 
   // Reincidentes
@@ -255,12 +264,12 @@ function initDep(){
   var totSobr=dep.sobrante.reduce(function(s,r){return s+r.tot;},0);
   var totRot =dep.roturas.reduce(function(s,r){return s+r.tot;},0);
   var totCons=dep.consumo.reduce(function(s,r){return s+r.tot;},0);
+  var totVenc = dep.vencido ? dep.vencido.reduce(function(s,r){return s+r.tot;},0) : (D_DEP.vencido_imp||0);
   document.getElementById('dep-kpis').innerHTML=
-    KPI('$'+F(totFalt),'Merma Faltante','#ef4444')+
-    KPI('$'+F(totSobr),'Sobrante','#34d399')+
     KPI('$'+F(totFalt-totSobr),'Merma Neta',(totFalt-totSobr)>0?'#ef4444':'#34d399')+
-    KPI('$'+F(totRot), 'Roturas','#ef4444')+
-    KPI('$'+F(totCons),'Consumo Interno','#fb923c');
+    KPI('$'+F(totRot),         'Roturas',   totRot>0?'#ef4444':'#94a3b8')+
+    KPI('$'+F(totCons),        'Consumo Interno', totCons>0?'#fb923c':'#94a3b8')+
+    KPI('$'+F(totVenc),        'Vencido',   totVenc>0?'#ef4444':'#94a3b8');
 
   function renderDepTb(id,rows){
     document.getElementById(id).innerHTML=rows.length?rows.map(function(r){
@@ -436,6 +445,7 @@ function renderSB(){
         '<span>\uD83D\uDCC5 '+fmtFecha(r.f)+'</span>'+
         '<span>\u26F8 Cam '+r.cam+'</span>'+
         '<span>\uD83D\uDC65 '+r.n+' cli</span>'+
+        (r.kg?'<span>'+r.kg.toFixed(1)+' kg</span>':'')+
         rejTag+
       '</div>'+
       '<div style="font-size:.8rem;font-weight:700;color:#e2e8f0;margin-top:4px">$'+F(r.tot)+'</div>'+
@@ -448,16 +458,17 @@ function selR(rep){
   var r=D_ROUTES.find(function(x){return x.rep===rep;});
   var cls=D_CLI[String(rep)]||[];
   if(!r){document.getElementById('rdet').innerHTML='<div class="empty">Sin datos</div>';return;}
-  var fmap={0:{bd:'bg',lbl:'Entregado'},1:{bd:'br',lbl:'Rechazo'},2:{bd:'by',lbl:'Con dev.'},3:{bd:'bp',lbl:'Cambio'}};
+  var fmap={0:{bd:'bg',lbl:'Entregado'},1:{bd:'br',lbl:'Rechazo Total'},2:{bd:'by',lbl:'Rechazo Parcial'},3:{bd:'bp',lbl:'Cambio'}};
   var html='<div style="margin-bottom:12px">'+
     '<div style="font-weight:800;font-size:1rem;margin-bottom:4px">Reparto N\u00b0 '+r.rep+' \u2014 '+r.ch+'</div>'+
     '<div style="font-size:.78rem;color:#94a3b8">\uD83D\uDCC5 '+fmtFecha(r.f)+' &nbsp; \u26F8 Cam\u00f3n '+r.cam+'</div>'+
     '<div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap">'+
       '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#34d399">'+cls.filter(function(c){return c[7]===0;}).length+'</div><div class="kpi-l">Entregados</div></div>'+
-      '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#ef4444">'+cls.filter(function(c){return c[7]>=1;}).length+'</div><div class="kpi-l">Rechazos</div></div>'+
-      '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#fb923c">'+cls.filter(function(c){return c[7]===3;}).length+'</div><div class="kpi-l">Cambios</div></div>'+
+      '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#ef4444">'+cls.filter(function(c){return c[7]===1;}).length+'</div><div class="kpi-l">Rej. Total</div></div>'+
+      '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#fb923c">'+cls.filter(function(c){return c[7]===2;}).length+'</div><div class="kpi-l">Rej. Parcial</div></div>'+
+      '<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#818cf8">'+cls.filter(function(c){return c[7]===3;}).length+'</div><div class="kpi-l">Cambios</div></div>'+
       '<div class="kpi" style="min-width:80px"><div class="kpi-v">'+cls.length+'</div><div class="kpi-l">Total</div></div>'+
-      '<div class="kpi" style="min-width:100px"><div class="kpi-v" style="color:#e2e8f0">$'+F(r.tot)+'</div><div class="kpi-l">Importe</div></div>'+
+      (r.kg?'<div class="kpi" style="min-width:80px"><div class="kpi-v" style="color:#64748b">'+r.kg.toFixed(1)+'</div><div class="kpi-l">Kg</div></div>':'')+
     '</div>'+
     '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">'+
       (r.pep?'<div class="kpi" style="min-width:90px;border-color:#3b82f6"><div class="kpi-v" style="color:#3b82f6;font-size:1rem">$'+F(r.pep)+'</div><div class="kpi-l">Pepsico</div></div>':'')+
