@@ -334,7 +334,7 @@ de = html.find('<!-- DATA_END -->')
 if ds>0 and de>0:
     sc_open  = html.rfind('<script>', 0, ds)
     sc_close = html.find('</script>', de) + len('</script>')
-    new_block = '<script><!-- DATA_START -->\n' + DATA_JS + '\n<!-- DATA_END --></script>'
+    new_block = '<script>// DATA_START\n' + DATA_JS + '\n// DATA_END\n</script>'
     html = html[:sc_open] + new_block + html[sc_close:]
     print(f"  Datos inyectados: {len(DATA_JS)//1024}KB")
 else:
