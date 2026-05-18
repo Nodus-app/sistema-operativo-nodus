@@ -239,7 +239,7 @@ else:
     print("  Cartones: no encontrado (opcional)")
 
 # ── MOVIMIENTOS / DEPOSITO (opcional) ──────────────────────────────────────────
-dep_data = {'faltante':[],'sobrante':[],'roturas':[],'consumo':[]}
+dep_data = {'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[]}
 mov_path = find("movimientos.xlsx")
 if mov_path:
     mov = pd.read_excel(mov_path)
@@ -276,6 +276,12 @@ if mov_path:
         # Consumo: TRA + motivo consumo
         cons=mov[(mov[tipo_col]=='TRA')&mov[mot_col].str.lower().str.contains('consumo',na=False)&(mov['stockmov_cantidad']<0)]
         dep_data['consumo']=mov_rows(cons)
+        # Vencido: TRA + motivo contiene 'vencido' (col G=TRA, col J=motivo)
+        if mot_col:
+            venc=mov[(mov[tipo_col]=='TRA') &
+                     mov[mot_col].astype(str).str.lower().str.contains('vencido',na=False) &
+                     (mov['stockmov_cantidad']<0)]
+            dep_data['vencido']=mov_rows(venc)
 
     # Merma: CON neteada
     if 'CON' in mov[tipo_col].values:
