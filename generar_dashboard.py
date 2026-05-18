@@ -100,6 +100,11 @@ print(f"  Venta actual: {len(vc):,} filas  Periodo: {PERIODO}")
 dev = vc[vc['tipo_venta']=='Devolucion'].copy()
 dev['motivo_desc'] = dev['motivodev'].map(MOTIVO_MAP).fillna('Otro')
 
+# Comprobantes all-devolucion (para by_chofer)
+comp_cls = vc.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
+comp_cls['all_dev'] = comp_cls['tipo_venta'].apply(lambda ts: all(t=='Devolucion' for t in ts))
+rej_comps = set(comp_cls[comp_cls['all_dev']]['Comprobante'])
+
 # Efectividad global: neto cliente+fecha
 cli_dia_global = vc.groupby(['Cliente','Fecha'])['Importe'].sum().reset_index()
 padron_global  = len(cli_dia_global)
