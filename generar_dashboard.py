@@ -110,9 +110,11 @@ dev_tot   = float(vc[vc['Comprobante'].isin(rej_comps)]['Importe'].sum())
 fac = int(comp_cls['has_venta'].sum())
 no_e= int(comp_cls['all_dev'].sum())
 
+# Rechazo $: TODAS las devoluciones (parcial + total)
+all_dev_imp = float(vc[vc['tipo_venta']=='Devolucion']['Importe'].sum())
 rej_kpis = {
-    'imp_venta': round(venta_tot,0), 'imp_dev': round(abs(dev_tot),0),
-    'pct_rechazo': round(abs(dev_tot)/venta_tot,4) if venta_tot else 0,
+    'imp_venta': round(venta_tot,0), 'imp_dev': round(abs(all_dev_imp),0),
+    'pct_rechazo': round(abs(all_dev_imp)/venta_tot,4) if venta_tot else 0,
     'cam_imp': round(float(vc[vc['tipo_venta']=='Cambio']['Importe'].abs().sum()),0),
     'fac': fac, 'no_e': no_e, 'efect': round(fac/(fac+no_e),4) if (fac+no_e) else 0
 }
@@ -135,10 +137,11 @@ def prov_met(df_p):
     cc = df_p.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
     cc['all_dev']   = cc['tipo_venta'].apply(lambda ts: all(t=='Devolucion' for t in ts))
     cc['has_venta'] = cc['tipo_venta'].apply(lambda ts: 'Venta' in ts)
+    # Efectividad: comps con venta / (comps con venta + comps all-dev)
     f=int(cc['has_venta'].sum()); n=int(cc['all_dev'].sum())
-    rc=set(cc[cc['all_dev']]['Comprobante'])
+    # Rechazo $: TODAS las lineas Devolucion (parcial + total)
     v=float(df_p[df_p['tipo_venta']=='Venta']['Importe'].sum())
-    r=float(df_p[df_p['Comprobante'].isin(rc)]['Importe'].sum())
+    r=float(df_p[df_p['tipo_venta']=='Devolucion']['Importe'].sum())
     c=float(df_p[df_p['tipo_venta']=='Cambio']['Importe'].abs().sum())
     return {'venta':round(v,0),'rec':round(abs(r),0),'cam':round(c,0),
             'rec_pct':round(abs(r)/v,4) if v else 0,'cam_pct':round(c/v,4) if v else 0,
