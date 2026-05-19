@@ -175,10 +175,10 @@ for rep_id, grp in vc.groupby('reparto'):
     pep  = float(vgrp[vgrp['proveedor']==PEPSICO]['Importe'].sum())
     mol  = float(vgrp[vgrp['proveedor']==MOLINOS]['Importe'].sum())
     sof  = float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum())
-    # Peso: cantxcap esta en gramos, dividir por 1000 para kg
+    # Peso: cantxcap ya esta en kg (valores tipicos 0.06-0.65 kg)
     if 'cantxcap' in vgrp.columns:
-        kg_unit = pd.to_numeric(vgrp['cantxcap'], errors='coerce').fillna(0) / 1000.0
-        kg_unit = kg_unit.clip(0, 25)  # max 25kg por unidad
+        kg_unit = pd.to_numeric(vgrp['cantxcap'], errors='coerce').fillna(0)
+        kg_unit = kg_unit.clip(0, 25)  # max 25kg por unidad, excluye outliers
         kg_tot  = float((kg_unit * vgrp['Cantidad'].abs()).sum())
     else:
         kg_tot = 0.0
@@ -268,21 +268,17 @@ if mov_path:
         return rows
 
     tipo_col = 'stockmov_tipo' if 'stockmov_tipo' in mov.columns else 'tipo'
-    mot_col  = 'stockmov_motivo' if 'stockmov_motivo' in mov.columns else None
+    dep_col  = 'deposito_nombre' if 'deposito_nombre' in mov.columns else None
 
-    # Roturas: TRA + motivo rotura
-    if mot_col:
-        rot=mov[(mov[tipo_col]=='TRA')&mov[mot_col].str.lower().str.contains('rotura',na=False)&(mov['stockmov_cantidad']<0)]
-        dep_data['roturas']=mov_rows(rot)
-        # Consumo: TRA + motivo consumo
-        cons=mov[(mov[tipo_col]=='TRA')&mov[mot_col].str.lower().str.contains('consumo',na=False)&(mov['stockmov_cantidad']<0)]
-        dep_data['consumo']=mov_rows(cons)
-        # Vencido: TRA + motivo contiene 'vencido' (col G=TRA, col J=motivo)
-        if mot_col:
-            venc=mov[(mov[tipo_col]=='TRA') &
-                     mov[mot_col].astype(str).str.lower().str.contains('vencido',na=False) &
-                     (mov['stockmov_cantidad']<0)]
-            dep_data['vencido']=mov_rows(venc)
+    # Usar deposito_nombre para clasificar (col J del Excel)
+    tra = mov[(mov[tipo_col]=='TRA') & (mov['stockmov_cantidad']<0)].copy()
+    if dep_col and len(tra):
+        rot  = tra[tra[dep_col].astype(str).str.lower().str.contains('rotura',  na=False)]
+        cons = tra[tra[dep_col].astype(str).str.lower().str.contains('consumo', na=False)]
+        venc = tra[tra[dep_col].astype(str).str.lower().str.contains('vencido', na=False)]
+        dep_data['roturas'] = mov_rows(rot)
+        dep_data['consumo'] = mov_rows(cons)
+        dep_data['vencido'] = mov_rows(venc)
 
     # Merma: CON neteada
     if 'CON' in mov[tipo_col].values:
