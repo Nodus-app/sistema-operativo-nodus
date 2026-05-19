@@ -175,12 +175,11 @@ for rep_id, grp in vc.groupby('reparto'):
     pep  = float(vgrp[vgrp['proveedor']==PEPSICO]['Importe'].sum())
     mol  = float(vgrp[vgrp['proveedor']==MOLINOS]['Importe'].sum())
     sof  = float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum())
-    # Peso: cantxcap (kg/unit) x cantidad, capped at 2kg for Pepsico, 3kg for others
+    # Peso: cantxcap esta en gramos, dividir por 1000 para kg
     if 'cantxcap' in vgrp.columns:
-        cap_kg = vgrp['proveedor'].apply(lambda p: 2.0 if p==PEPSICO else 3.0)
-        kg_unit= pd.to_numeric(vgrp['cantxcap'], errors='coerce').fillna(0).clip(0, None)
-        kg_unit= kg_unit.where(kg_unit<=cap_kg, cap_kg)
-        kg_tot = float((kg_unit * vgrp['Cantidad'].abs()).sum())
+        kg_unit = pd.to_numeric(vgrp['cantxcap'], errors='coerce').fillna(0) / 1000.0
+        kg_unit = kg_unit.clip(0, 25)  # max 25kg por unidad
+        kg_tot  = float((kg_unit * vgrp['Cantidad'].abs()).sum())
     else:
         kg_tot = 0.0
     clientes = []
@@ -195,7 +194,9 @@ for rep_id, grp in vc.groupby('reparto'):
         cmp=str(cg['Comprobante'].iloc[0] or '')
         fl=1 if rt else(2 if dv else(3 if cm2 else 0))
         clientes.append([si(cli_id),raz,dir2,loc,cmp,imp,cnt,fl])
-    rej=sum(1 for c in clientes if c[7]>=1)
+    # Rechazo total = clientes con neto <= 0 en este reparto (misma logica que efectividad)
+    rej_cli = grp.groupby('Cliente')['Importe'].sum()
+    rej=int((rej_cli <= 0).sum())
     route_index.append({'rep':si(rep_id),'ch':ch,'f':str(fec),'cam':cam,
         'n':len(clientes),'tot':round(tot,0),'rej':rej,'kg':round(kg_tot,1),
         'pep':round(pep,0),'mol':round(mol,0),'sof':round(float(vgrp[vgrp['proveedor']==SOFTYS]['Importe'].sum()),0),
@@ -316,12 +317,14 @@ rej_cli = (vc[vc['Comprobante'].isin(rej_comps2)]
                 razon=('Razon_Social','first'),
                 loc=('localidad','first'),
                 imp=('Importe','sum'),
+                vendedor=('cod_ven','first') if 'cod_ven' in vc.columns else ('Cliente','first'),
                 choferes=('chofer', lambda x: ', '.join(sorted(set(str(v) for v in x))[:3])),
                 fechas=('fecha_str', lambda x: ', '.join(sorted(set(str(v) for v in x))[:5])))
            .reset_index())
 reinc_list = [{'cid':int(r['Cliente']),'razon':str(r['razon'])[:35],
                'loc':str(r['loc'])[:22] if r['loc'] else '',
                'n':int(r['n']),'imp':round(float(abs(r['imp'])),0),
+               'vendedor':str(int(r['vendedor'])) if pd.notna(r.get('vendedor')) else '-',
                'choferes':str(r['choferes'])[:40],'fechas':str(r['fechas'])}
               for _,r in rej_cli[rej_cli['n']>1].sort_values('n',ascending=False).head(50).iterrows()]
 print(f"  Reincidentes: {len(reinc_list)}")

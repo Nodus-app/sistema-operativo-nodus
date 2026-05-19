@@ -188,11 +188,21 @@ function renderRejAll(){
   document.getElementById('rej-mot-tb').innerHTML=motivos.length?
     motivos.map(function(m){
       var pct=totImp>0?m.imp/totImp:0;
-      return '<tr><td>'+BD('br',m.motivo)+'</td>'+
-        '<td style="text-align:right;color:#ef4444">$'+F(m.imp)+'</td>'+
-        '<td style="text-align:right">'+(m.uds?F(m.uds)+' uds':'-')+'</td>'+
-        '<td style="text-align:right">'+m.lineas+'</td>'+
-        '<td>'+PR(pct,'#ef4444',0.5)+' '+P(pct)+'</td></tr>';
+      var colors=['#ef4444','#f97316','#f59e0b','#84cc16','#22d3ee','#818cf8','#e879f9','#fb7185','#94a3b8'];
+      var colIdx=motivos.indexOf(m)%colors.length;
+      var barW=Math.round(pct*100);
+      return '<tr>'+
+        '<td><div style="display:flex;align-items:center;gap:8px">'+
+          '<div style="width:10px;height:10px;border-radius:50%;background:'+colors[colIdx]+';flex-shrink:0"></div>'+
+          '<strong>'+m.motivo+'</strong></div></td>'+
+        '<td style="text-align:right;color:#ef4444;font-weight:700">$'+F(m.imp)+'</td>'+
+        '<td style="text-align:right">'+F(m.uds)+' uds</td>'+
+        '<td><div style="display:flex;align-items:center;gap:6px">'+
+          '<div style="background:#1e2535;border-radius:4px;height:8px;width:100px;overflow:hidden">'+
+            '<div style="height:100%;border-radius:4px;background:'+colors[colIdx]+';width:'+barW+'%"></div>'+
+          '</div>'+
+          '<span style="font-size:.78rem;color:#94a3b8;min-width:35px">'+P(pct)+'</span>'+
+        '</div></td></tr>';
     }).join(''):'<tr><td colspan="5" class="empty">Sin datos</td></tr>';
 
   // Por chofer - filter
@@ -237,6 +247,7 @@ function renderRejAll(){
         '<td style="color:#64748b">'+r.loc+'</td>'+
         '<td style="text-align:right;color:#ef4444;font-weight:700">'+r.n+'</td>'+
         '<td style="text-align:right">$'+F(r.imp)+'</td>'+
+        '<td style="font-size:.75rem;color:#94a3b8">'+(r.vendedor||'-')+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+r.choferes+'</td>'+
         '<td style="font-size:.73rem;color:#64748b">'+r.fechas+'</td></tr>';
     }).join(''):'<tr><td colspan="7" class="empty">Sin reincidentes</td></tr>';
@@ -248,6 +259,7 @@ function rejTab(id,btn){
   if(btn) btn.classList.add('on');
   var el=document.getElementById('rp-'+id);
   if(el) el.style.display='block';
+  if(id==='conc') initConciliacion();
 }
 
 // \u2500\u2500 DEPOSITO \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -264,7 +276,7 @@ function initDep(){
   var totSobr=dep.sobrante.reduce(function(s,r){return s+r.tot;},0);
   var totRot =dep.roturas.reduce(function(s,r){return s+r.tot;},0);
   var totCons=dep.consumo.reduce(function(s,r){return s+r.tot;},0);
-  var totVenc = dep.vencido ? dep.vencido.reduce(function(s,r){return s+r.tot;},0) : (D_DEP.vencido_imp||0);
+  var totVenc = dep.vencido ? dep.vencido.reduce(function(s,r){return s+r.tot;},0) : 0;
   document.getElementById('dep-kpis').innerHTML=
     KPI('$'+F(totFalt-totSobr),'Merma Neta',(totFalt-totSobr)>0?'#ef4444':'#34d399')+
     KPI('$'+F(totRot),         'Roturas',   totRot>0?'#ef4444':'#94a3b8')+
@@ -284,6 +296,7 @@ function initDep(){
   renderDepTb('dep-sobr-tb',dep.sobrante);
   renderDepTb('dep-rot-tb', dep.roturas);
   renderDepTb('dep-cons-tb',dep.consumo);
+  renderDepTb('dep-venc-tb',dep.vencido||[]);
 }
 
 // \u2500\u2500 VENTAS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -490,4 +503,129 @@ function selR(rep){
       '</div></div>';
   }).join('');
   document.getElementById('rdet').innerHTML=html;
+}
+
+// \u2500\u2500 APP EN VIVO Y CONCILIACION \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+var SHEETS_API = 'https://script.google.com/macros/s/AKfycbxc4P4e6JqrpjkLg9LJn-rN1DX-i3Q7MS5jRh-_SuMRP3azTNlryg_Wvg1uQVKk5jJhkw/exec';
+var pwaRows = [];
+
+function initConciliacion(){
+  loadPWA();
+}
+
+function loadPWA(){
+  var cont = document.getElementById('conc-content');
+  var load = document.getElementById('conc-loading');
+  var err  = document.getElementById('conc-error');
+  if(!cont) return;
+  load.style.display='block'; cont.style.display='none'; err.style.display='none';
+
+  fetch(SHEETS_API+'?accion=getRechazos', {method:'GET',mode:'cors'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){
+      pwaRows = Array.isArray(data)?data:(data.rechazos||data.data||[]);
+      load.style.display='none'; cont.style.display='block';
+      renderConciliacion();
+    })
+    .catch(function(e){
+      load.style.display='none'; err.style.display='block';
+      document.getElementById('conc-err-msg').textContent='No se pudo conectar con la app: '+e.message;
+    });
+}
+
+function renderConciliacion(){
+  // Build gescom index by cliente+fecha
+  var gesIdx = {};
+  (D_CHOFER||[]).forEach(function(g){
+    // Use D_REINC for client-level data
+  });
+  // Index gescom by comprobante -> {cliente, fecha, chofer, imp}
+  // We use D_ROUTES client data for cross-reference
+  var gesMap = {};
+  D_ROUTES.forEach(function(r){
+    var cls = D_CLI[String(r.rep)]||[];
+    cls.forEach(function(c){
+      if(c[7]===1){ // rechazo total
+        var key = String(c[0])+'_'+r.f;
+        gesMap[key] = {cliente:c[0],razon:c[1],chofer:r.ch,fecha:r.f,imp:Math.abs(c[5])};
+      }
+    });
+  });
+
+  // Cross reference with PWA
+  var matched=[], soloGes=[], soloPwa=[];
+  var gesKeys = Object.keys(gesMap);
+
+  pwaRows.forEach(function(p){
+    var fechaPwa = p.fecha||'';
+    if(fechaPwa.indexOf('/')>0){
+      // DD/MM/YYYY -> YYYY-MM-DD
+      var parts=fechaPwa.split('/');
+      if(parts.length===3) fechaPwa=parts[2]+'-'+parts[1]+'-'+parts[0];
+    }
+    var key = String(p.cliente)+'_'+fechaPwa;
+    if(gesMap[key]){
+      matched.push({pwa:p, ges:gesMap[key], key:key});
+      delete gesMap[key];
+    } else {
+      soloPwa.push(p);
+    }
+  });
+  Object.values(gesMap).forEach(function(g){ soloGes.push(g); });
+
+  // KPIs
+  document.getElementById('conc-kpis').innerHTML=
+    KPI(String(matched.length),'Gestionados (App+Gescom)','#34d399')+
+    KPI(String(soloGes.length),'Solo en Gescom (sin gestion)','#ef4444')+
+    KPI(String(soloPwa.length),'Solo en App (salvados)','#fb923c')+
+    KPI(String(pwaRows.length),'Total App','#e2e8f0');
+
+  // Conciliacion table
+  var rows = matched.map(function(m){
+    var resp = m.pwa.respuesta_vendedor||m.pwa.resp||'';
+    var est  = resp ? BD('bg','Gestionado') : BD('br','Sin respuesta');
+    var fecha = fmtFecha(m.ges.fecha);
+    return '<tr>'+
+      '<td>'+fecha+'</td>'+
+      '<td><strong>'+m.ges.razon+'</strong></td>'+
+      '<td>'+m.ges.chofer+'</td>'+
+      '<td>'+BD('br',m.pwa.motivo||'-')+'</td>'+
+      '<td style="font-size:.75rem">'+m.pwa.observacion+'</td>'+
+      '<td>'+est+'</td>'+
+      '<td style="font-size:.75rem;color:#94a3b8">'+resp+'</td>'+
+      '<td style="text-align:right;color:#ef4444">$'+F(m.ges.imp)+'</td></tr>';
+  });
+  var soloGesRows = soloGes.map(function(g){
+    return '<tr style="opacity:.7">'+
+      '<td>'+fmtFecha(g.fecha)+'</td>'+
+      '<td><strong>'+g.razon+'</strong></td>'+
+      '<td>'+g.chofer+'</td>'+
+      '<td>'+BD('by','Sin registro app')+'</td>'+
+      '<td style="color:#64748b">No cargado por chofer</td>'+
+      '<td>'+BD('br','Sin gestion')+'</td>'+
+      '<td>-</td>'+
+      '<td style="text-align:right;color:#ef4444">$'+F(g.imp)+'</td></tr>';
+  });
+  var allRows = rows.concat(soloGesRows);
+  document.getElementById('conc-tbody').innerHTML = allRows.length ?
+    allRows.join('') : '<tr><td colspan="8" class="empty">Sin datos de conciliacion</td></tr>';
+
+  // Plan de accion: top choferes con mas rechazos sin gestion
+  var chPlan = {};
+  soloGes.forEach(function(g){
+    if(!chPlan[g.chofer]) chPlan[g.chofer]={ch:g.chofer,n:0,imp:0};
+    chPlan[g.chofer].n++; chPlan[g.chofer].imp+=g.imp;
+  });
+  var planRows = Object.values(chPlan).sort(function(a,b){return b.n-a.n;}).slice(0,10);
+  document.getElementById('plan-tbody').innerHTML = planRows.length ?
+    planRows.map(function(r,i){
+      var urgencia = r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atencion'):BD('bp','Revisar');
+      return '<tr>'+
+        '<td>'+(i+1)+'</td>'+
+        '<td><strong>'+r.ch+'</strong></td>'+
+        '<td style="text-align:right;color:#ef4444">'+r.n+'</td>'+
+        '<td style="text-align:right">$'+F(r.imp)+'</td>'+
+        '<td>'+urgencia+'</td>'+
+        '<td style="font-size:.75rem;color:#94a3b8">Revisar '+r.n+' rechazo'+(r.n>1?'s':'')+' sin documentar en app</td></tr>';
+    }).join('') : '<tr><td colspan="6" class="empty">Sin alertas</td></tr>';
 }
