@@ -76,6 +76,12 @@ if not vc_path:
 vc = pd.read_excel(vc_path)
 vc['Importe']   = pd.to_numeric(vc['Importe'],   errors='coerce').fillna(0)
 vc['Cantidad']  = pd.to_numeric(vc['Cantidad'],  errors='coerce').fillna(0)
+# Importe neto = precio neto (col M) x cantidad (col F)
+if 'neto' in vc.columns:
+    vc['neto']  = pd.to_numeric(vc['neto'], errors='coerce').fillna(0)
+    vc['importe_neto'] = vc['neto'] * vc['Cantidad'].abs()
+else:
+    vc['importe_neto'] = vc['Importe']
 vc['tipo_venta']= vc['tipo_venta'].fillna('Venta') if 'tipo_venta' in vc.columns else 'Venta'
 vc['chofer']    = vc['chofer'].fillna('Sin chofer').str.strip() if 'chofer' in vc.columns else 'Sin chofer'
 vc['proveedor'] = vc['proveedor'].fillna('Sin proveedor').str.strip() if 'proveedor' in vc.columns else 'Sin proveedor'
@@ -112,12 +118,14 @@ padron_global  = len(cli_dia_global)
 no_e_global    = int((cli_dia_global['Importe'] <= 0).sum())
 fac_global     = padron_global - no_e_global
 
-venta_tot = float(vc[vc['tipo_venta']=='Venta']['Importe'].sum())
-all_dev_imp = float(vc[vc['tipo_venta']=='Devolucion']['Importe'].sum())
+venta_tot   = float(vc[vc['tipo_venta']=='Venta']['importe_neto'].sum())
+all_dev_imp = float(vc[vc['tipo_venta']=='Devolucion']['importe_neto'].sum())
+cam_tot     = float(vc[vc['tipo_venta']=='Cambio']['importe_neto'].sum())
+venta_neta  = venta_tot - abs(all_dev_imp) - abs(cam_tot)
 rej_kpis = {
-    'imp_venta': round(venta_tot,0), 'imp_dev': round(abs(all_dev_imp),0),
+    'imp_venta': round(venta_neta,0), 'imp_dev': round(abs(all_dev_imp),0),
     'pct_rechazo': round(abs(all_dev_imp)/venta_tot,4) if venta_tot else 0,
-    'cam_imp': round(float(vc[vc['tipo_venta']=='Cambio']['Importe'].abs().sum()),0),
+    'cam_imp': round(abs(cam_tot),0),
     'fac': fac_global, 'no_e': no_e_global,
     'efect': round(fac_global/padron_global,4) if padron_global else 0
 }
@@ -127,7 +135,7 @@ bm['isum'] = bm['isum'].abs()
 by_motivo = [{'motivo':r['motivo_desc'],'lineas':int(r['lineas']),'uds':int(abs(r['uds'])),'imp':round(float(r['isum']),0)}
              for _,r in bm.sort_values('isum',ascending=False).iterrows()]
 
-bc = vc[vc['Comprobante'].isin(rej_comps)].groupby('chofer').agg(n=('Comprobante','nunique'),imp=('Importe','sum')).reset_index()
+bc = vc[vc['Comprobante'].isin(rej_comps)].groupby('chofer').agg(n=('Comprobante','nunique'),imp=('importe_neto','sum')).reset_index()
 tot_ch = comp_cls.merge(vc[['Comprobante','chofer']].drop_duplicates(),on='Comprobante',how='left')
 tot_ch = tot_ch[tot_ch['has_venta']].groupby('chofer').size().reset_index(name='total')
 bc = bc.merge(tot_ch,on='chofer',how='left').fillna({'total':0})
@@ -141,9 +149,9 @@ def prov_met(df_p):
     padron = len(cli_dia)
     no_e   = int((cli_dia['Importe'] <= 0).sum())
     f      = padron - no_e
-    v=float(df_p[df_p['tipo_venta']=='Venta']['Importe'].sum())
-    r=float(df_p[df_p['tipo_venta']=='Devolucion']['Importe'].sum())
-    c=float(df_p[df_p['tipo_venta']=='Cambio']['Importe'].abs().sum())
+    v=float(df_p[df_p['tipo_venta']=='Venta']['importe_neto'].sum())
+    r=float(df_p[df_p['tipo_venta']=='Devolucion']['importe_neto'].sum())
+    c=float(df_p[df_p['tipo_venta']=='Cambio']['importe_neto'].sum())
     # Kg para este proveedor
     kg = 0.0
     if 'cantxcap' in df_p.columns:
