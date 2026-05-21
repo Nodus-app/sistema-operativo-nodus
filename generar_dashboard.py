@@ -253,6 +253,53 @@ if cart_path:
 else:
     print("  Cartones: no encontrado (opcional)")
 
+# ── RECHAZOS APP (opcional) ────────────────────────────────────────────────────
+app_path = find("Registro_de_Rechazos.xlsx")
+app_records = []
+CHOFER_MAP = {
+    'AVALOS GOMEZ RODRIGO SEBASTIAN': 'RODRIGO AVALOS',
+    'BELEN EMILIANO AGUSTIN':         'BELEN AGUSTIN',
+    'CANELO PABLO FERNANDO':          'PABLO CANELO',
+    'CARO MAXIMILIANO ALBERTO':       'MAXIMILANO  CARO',
+    'GONZALEZ CECILIA GUADALUPE':     'CECILIA GONZALEZ',
+    'GUEVARA ENRIQUE LEONARDO':       'LEONARDO GUEVARA',
+    'GUZMAN DIEGO NORBERTO':          'GUZMAN DIEGO',
+    'JUAREZ LUIS ENRIQUE':            'LUIS JUAREZ',
+    'LUJAN LUCAS':                    'LUCAS LUJAN',
+    'MARTINEZ PEREZ JORGE LEANDRO':   'MARTINEZ LEANDRO',
+    'MOLINA JORGE GABRIEL':           'JORGE MOLINA',
+    'OYOLA GASTON AGUSTIN':           'GASTON OYOLA',
+    'PALLOTI DUILIO':                 'DUILIO PALLOTTI',
+    'RAFAELLI DIEGO DANIEL':          'DIEGO RAFAELLI',
+    'RICAPA PAREDES JOSE ANTONIO':    'JOSE RICAPA',
+    'ROMANO RODRIGO ERNESTO':         'RODRIGO ROMANO',
+    'SUAREZ TOBIAS EMIR':             'SUAREZ EMIR',
+    'TALAVERA ADRIAN ISMAEL':         'TALAVERA ADRIAN',
+}
+if app_path:
+    app = pd.read_excel(app_path)
+    app['Fecha'] = pd.to_datetime(app['Fecha'], errors='coerce')
+    app['fecha_str'] = app['Fecha'].dt.strftime('%Y-%m-%d')
+    app['chofer_norm'] = app['Chofer'].str.strip().str.upper()
+    app['chofer_ges'] = app['chofer_norm'].map(CHOFER_MAP).fillna(app['chofer_norm'])
+    for _,r in app.iterrows():
+        app_records.append({
+            'id':    str(r.get('ID','')),
+            'fecha': str(r['fecha_str']),
+            'hora':  str(r.get('Hora','')),
+            'chofer':str(r['chofer_ges']),
+            'cliente': str(r.get('CLIENTE','')) if pd.notna(r.get('CLIENTE')) else '',
+            'vendedor': str(r.get('Vendedor','')),
+            'motivo': str(r.get('Motivo','')),
+            'obs':   str(r.get('Observacion','')) if pd.notna(r.get('Observacion')) else '',
+            'foto':  str(r.get('Foto','')) if pd.notna(r.get('Foto')) else '',
+            'resp':  str(r.get('Respuesta Vendedor','')) if pd.notna(r.get('Respuesta Vendedor')) else '',
+            'estado':str(r.get('Estado','')),
+        })
+    print(f"  App rechazos: {len(app_records)} registros")
+else:
+    print("  App rechazos: no encontrado (opcional)")
+
 # ── MOVIMIENTOS / DEPOSITO (opcional) ──────────────────────────────────────────
 dep_data = {'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[]}
 mov_path = find("movimientos.xlsx")
@@ -352,6 +399,7 @@ DATA_JS = '\n'.join([
     f'var D_PROVS={json.dumps(sorted(vc["proveedor"].dropna().str.strip().unique().tolist()),ensure_ascii=True,separators=(",",":"))};',
     f'var D_CHS={json.dumps(sorted(vc["chofer"].dropna().str.strip().unique().tolist()),ensure_ascii=True,separators=(",",":"))};',
     make_chunks('D_CART',   cart_records),
+    make_chunks('D_APP',    app_records),
     f'var D_DEP={json.dumps(dep_data,ensure_ascii=True,separators=(",",":"))};',
     f'var D_REINC={json.dumps(reinc_list,ensure_ascii=True,separators=(",",":"))};'
 ])
