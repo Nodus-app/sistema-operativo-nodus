@@ -385,7 +385,7 @@ if mov_path:
         dep_col  = 'deposito_nombre' if 'deposito_nombre' in mov.columns else None
         tra = mov[mov[tipo_col]=='TRA'].copy() if dep_col else pd.DataFrame()
         if dep_col and len(tra):
-            rot  = tra[tra[dep_col].astype(str).str.lower().str.contains('rotura',  na=False)]
+            rot  = tra[tra[dep_col].astype(str).str.lower().str.contains('roturas deposito', na=False)]
             cons = tra[tra[dep_col].astype(str).str.lower().str.contains('consumo', na=False)]
             venc = tra[tra[dep_col].astype(str).str.lower().str.contains('vencido', na=False)]
             dep_data['roturas'] = mov_rows(rot)
