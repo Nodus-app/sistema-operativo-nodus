@@ -162,9 +162,10 @@ function renderRejAll(){
         '<td>'+P(p.efect)+'</td></tr>';
     }).join(''):'<tr><td colspan="9" class="empty">Sin datos</td></tr>';
 
-  var totImp=D_MOTIVO.reduce(function(s,m){return s+m.imp;},0);
-  document.getElementById('rej-mot-tb').innerHTML=D_MOTIVO.length?
-    D_MOTIVO.map(function(m,idx){
+  var mData=(selProv && window.D_MOTIVO_PROV && D_MOTIVO_PROV[selProv])?D_MOTIVO_PROV[selProv]:D_MOTIVO;
+  var totImp=mData.reduce(function(s,m){return s+m.imp;},0);
+  document.getElementById('rej-mot-tb').innerHTML=mData.length?
+    mData.map(function(m,idx){
       var pct=totImp>0?m.imp/totImp:0;
       var colors=['#ef4444','#f97316','#f59e0b','#84cc16','#22d3ee','#818cf8','#e879f9','#fb7185','#94a3b8'];
       var col=colors[idx%colors.length];
@@ -485,7 +486,7 @@ function selR(rep){
   html+=cls.map(function(c){
     var fm=fmap[c[7]]||fmap[0];
     return '<div class="cli-row">'+
-      '<div><div class="cli-name">'+c[1]+'</div>'+
+      '<div><div class="cli-name">'+c[1]+' <span style="font-size:.72rem;color:#64748b">#'+c[0]+'</span></div>'+
       '<div class="cli-addr">'+c[2]+(c[3]?' \u2014 '+c[3]:'')+'</div>'+
       '<div class="cli-meta">'+BD(fm.bd,fm.lbl)+(c[4]?'<span style="font-size:.72rem;color:#64748b">'+c[4]+'</span>':'')+'</div>'+
       '</div>'+
