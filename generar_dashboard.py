@@ -116,7 +116,7 @@ if 'cantxcap'     not in vc.columns: vc['cantxcap']     = 0
 # Importe neto = neto (col M) x cantidad (col F)
 if 'neto' in vc.columns:
     vc['neto']         = pd.to_numeric(vc['neto'], errors='coerce').fillna(0)
-    vc['importe_neto'] = vc['neto'] * vc['Cantidad'].abs()
+    vc['importe_neto'] = vc['neto'] * vc['Cantidad']   # signed, no abs()
 else:
     vc['importe_neto'] = vc['Importe']
 
@@ -138,16 +138,17 @@ comp_cls['all_dev']   = comp_cls['tipo_venta'].apply(lambda ts: all(t=='Devoluci
 comp_cls['has_venta'] = comp_cls['tipo_venta'].apply(lambda ts: 'Venta' in ts)
 rej_comps = set(comp_cls[comp_cls['all_dev']]['Comprobante'])
 
-venta_tot   = float(vc[vc['tipo_venta']=='Venta']['importe_neto'].sum())
-all_dev_imp = float(vc[vc['tipo_venta']=='Devolucion']['importe_neto'].sum())
+venta_tot   = float(vc[vc['importe_neto'] > 0]['importe_neto'].sum())
+all_dev_imp = float(vc[vc['importe_neto'] < 0]['importe_neto'].sum())
 cam_tot     = float(vc[vc['tipo_venta']=='Cambio']['importe_neto'].sum())
-venta_neta  = venta_tot - abs(all_dev_imp) - abs(cam_tot)
+venta_neta  = venta_tot + all_dev_imp  # all_dev_imp is already negative
 
-# Efectividad: neto cliente+fecha <= 0
-cli_dia_global = vc.groupby(['Cliente','Fecha'])['importe_neto'].sum().reset_index()
-padron_global  = len(cli_dia_global)
-no_e_global    = int((cli_dia_global['importe_neto'] <= 0).sum())
-fac_global     = padron_global - no_e_global
+# Efectividad global: cliente+reparto+proveedor, signed neto, excl Cantidad=0
+vc_e = vc[vc['Cantidad'] != 0]
+cli_rep_prov  = vc_e.groupby(['Cliente','reparto','proveedor'])['importe_neto'].sum()
+padron_global = len(cli_rep_prov)
+no_e_global   = int((cli_rep_prov <= 0).sum())
+fac_global    = padron_global - no_e_global
 
 rej_kpis = {
     'imp_venta':   round(venta_neta,0),
@@ -174,10 +175,12 @@ by_chofer = [{'ch':r['chofer'],'n':int(r['n']),'tot':int(r['total']),'imp':round
 
 def prov_met(df_p):
     if df_p.empty: return None
-    cli_dia = df_p.groupby(['Cliente','Fecha'])['importe_neto'].sum().reset_index()
-    padron = len(cli_dia); no_e = int((cli_dia['importe_neto']<=0).sum()); f = padron-no_e
-    v=float(df_p[df_p['tipo_venta']=='Venta']['importe_neto'].sum())
-    r=float(df_p[df_p['tipo_venta']=='Devolucion']['importe_neto'].sum())
+    # Efectividad: cliente+reparto, signed neto, excl Cantidad=0
+    df_e = df_p[df_p['Cantidad'] != 0]
+    cli_rep = df_e.groupby(['Cliente','reparto'])['importe_neto'].sum()
+    padron = len(cli_rep); no_e = int((cli_rep <= 0).sum()); f = padron - no_e
+    v=float(df_p[df_p['importe_neto'] > 0]['importe_neto'].sum())
+    r=float(df_p[df_p['importe_neto'] < 0]['importe_neto'].sum())
     c=float(df_p[df_p['tipo_venta']=='Cambio']['importe_neto'].sum())
     kg=float(pd.to_numeric(df_p[df_p['tipo_venta']=='Venta']['cantxcap'],errors='coerce').fillna(0).clip(0,5000).sum()) if 'cantxcap' in df_p.columns else 0.0
     return {'venta':round(v,0),'rec':round(abs(r),0),'cam':round(abs(c),0),
@@ -212,14 +215,17 @@ for rep_id, grp in vc.groupby('reparto'):
     oth  = tot - pep - mol - sof
     kg_tot = float(pd.to_numeric(vgrp['cantxcap'],errors='coerce').fillna(0).clip(0,5000).sum())
     # Rechazo total: cliente sin venta en este reparto
-    venta_x_cli = vgrp.groupby('Cliente')['importe_neto'].sum()
-    todos_cli   = set(grp['Cliente'].unique())
-    rej = sum(1 for c in todos_cli if venta_x_cli.get(c,0) <= 0)
+    # Rechazo total: unique (cliente+proveedor) con neto signed <= 0, excl cant=0
+    grp_e = grp[grp['Cantidad'] != 0]
+    cli_prov_neto = grp_e.groupby(['Cliente','proveedor'])['importe_neto'].sum()
+    rej = int((cli_prov_neto <= 0).sum())
     clientes = []
     for cli_id, cg in grp.groupby('Cliente'):
         tipos = list(cg['tipo_venta'].fillna('Venta'))
-        venta_cli = float(cg[cg['tipo_venta']=='Venta']['importe_neto'].sum())
-        rt = venta_cli <= 0
+        # Rechazo total: neto signed (excl cant=0) <= 0 para este proveedor en reparto
+        cg_e = cg[cg['Cantidad'] != 0]
+        neto_signed = float(cg_e['importe_neto'].sum())
+        rt = neto_signed <= 0
         dv = 'Devolucion' in tipos and not rt
         cm2= 'Cambio' in tipos
         imp = int(cg[cg['tipo_venta']=='Venta']['importe_neto'].sum())
