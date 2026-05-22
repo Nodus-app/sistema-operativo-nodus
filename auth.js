@@ -121,11 +121,16 @@ function initRej(){
       D_PROV.map(function(p){return '<option value="'+p.prov+'">'+p.prov+'</option>';}).join('');
     pSel.onchange=renderRejAll;
   }
+  var chSel=document.getElementById('rej-ch-f');
+  if(chSel&&chSel.options.length<=1){
+    D_CHS.forEach(function(c){chSel.innerHTML+='<option value="'+c+'">'+c+'</option>';});
+  }
   renderRejAll();
 }
 
 function renderRejAll(){
   var selProv=(document.getElementById('rej-prov-f')||{}).value||'';
+  var selCh=(document.getElementById('rej-ch-f')||{}).value||'';
   var pm=selProv?D_PROV.filter(function(p){return p.prov===selProv;}):D_PROV;
   var vT=pm.reduce(function(s,p){return s+p.venta;},0);
   var rT=pm.reduce(function(s,p){return s+p.rec;},0);
@@ -215,7 +220,11 @@ function renderRejAll(){
         '<td>'+P(c.ef)+'</td></tr>';
     }).join(''):'<tr><td colspan="5" class="empty">Sin datos</td></tr>';
 
-  var reinc=D_REINC;
+  var reinc=D_REINC.filter(function(r){
+    if(selCh && r.choferes.indexOf(selCh)<0) return false;
+    if(selProv && !(r.provs||[]).some(function(p){return p.prov===selProv;})) return false;
+    return true;
+  });
   document.getElementById('rej-reinc-tb').innerHTML=reinc.length?
     reinc.map(function(r,i){
       var provs=(r.provs||[]).map(function(p){
