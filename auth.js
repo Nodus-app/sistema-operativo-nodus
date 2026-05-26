@@ -264,6 +264,20 @@ function initDep(){
     var provs=[...new Set(allRows.map(function(r){return r.prov;}))].sort().filter(Boolean);
     provs.forEach(function(p){provSel.innerHTML+='<option value="'+p+'">'+p+'</option>';});
   }
+  // Compensaciones table
+  var comps=dep.compensaciones||[];
+  var compEl=document.getElementById('dep-comp-tb');
+  if(compEl){
+    compEl.innerHTML=comps.length?comps.map(function(c){
+      var neto=c.tot_f+c.tot_s;
+      return '<tr>'+
+        '<td style="color:#ef4444">'+c.falt+'</td>'+
+        '<td style="text-align:right;color:#ef4444">'+c.u_f+' uds / $'+F(Math.abs(c.tot_f))+'</td>'+
+        '<td style="color:#34d399">'+c.sobr+'</td>'+
+        '<td style="text-align:right;color:#34d399">'+c.u_s+' uds / $'+F(c.tot_s)+'</td>'+
+        '<td style="text-align:right;color:'+(neto<0?'#ef4444':'#34d399')+'">$'+F(neto)+'</td></tr>';
+    }).join(''):'<tr><td colspan="5" class="empty">Sin compensaciones detectadas</td></tr>';
+  }
   var noteEl=document.getElementById('dep-note');
   if(!hasDep){
     if(noteEl) noteEl.textContent='Diferencias de Inventario \u2014 subi movimientos.xlsx para ver datos';

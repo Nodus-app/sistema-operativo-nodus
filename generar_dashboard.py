@@ -411,7 +411,7 @@ else:
     print("  App rechazos: no encontrado (opcional)")
 
 # ── DEPOSITO ──────────────────────────────────────────────────────────────────
-dep_data = {'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[],'kpis':{}}
+dep_data = {'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[],'kpis':{},'compensaciones':[]}
 mov_path = find("movimientos.xlsx")
 if mov_path:
     try:
@@ -446,22 +446,47 @@ if mov_path:
             dep_data['roturas'] = mov_rows(rot)
             dep_data['consumo'] = mov_rows(cons)
             dep_data['vencido'] = mov_rows(venc)
-        if 'CON' in mov[tipo_col].values:
-            con=mov[mov[tipo_col]=='CON'].copy()
-            con['prov']=con['articulo_codigo'].apply(get_prov) if 'articulo_codigo' in con.columns else 'Sin proveedor'
-            con_net=con.groupby(['articulo_codigo','descripcion','prov']).agg(
-                neto=('stockmov_cantidad','sum'),cu=('costo','first')).reset_index()
-            con_net=con_net[con_net['cu']>0]
-            con_neg=con_net[con_net['neto']<0].copy(); con_neg['u']=con_neg['neto'].abs()
-            con_pos=con_net[con_net['neto']>0].copy(); con_pos['u']=con_pos['neto']
+        # Merma: MAN + CON neteados por articulo
+        merma_tipos = [t for t in ['MAN','CON'] if t in mov[tipo_col].values]
+        if merma_tipos:
+            mer = mov[mov[tipo_col].isin(merma_tipos)].copy()
+            mer['prov'] = mer['articulo_codigo'].apply(get_prov) if 'articulo_codigo' in mer.columns else 'Sin proveedor'
+            mer_net = mer.groupby(['descripcion','prov']).agg(
+                neto=('stockmov_cantidad','sum'), cu=('costo','first')).reset_index()
+            mer_net = mer_net[mer_net['cu']>0].copy()
+            mer_net['tot'] = mer_net['neto'] * mer_net['cu']
+            con_neg = mer_net[mer_net['neto']<0].copy(); con_neg['u'] = con_neg['neto'].abs()
+            con_pos = mer_net[mer_net['neto']>0].copy(); con_pos['u'] = con_pos['neto']
             dep_data['faltante']=[{'desc':str(r['descripcion'])[:50],'prov':str(r['prov']),
-                'u':int(r['u']),'cu':round(float(r['cu']),2),'tot':round(float(r['u']*r['cu']),2),'fecha':periodo_label,
-                'pct':round(float(r['u']*r['cu'])/costo_venta*100,4) if costo_venta else 0}
-                for _,r in con_neg.sort_values('u',ascending=False).iterrows()]
+                'u':int(r['u']),'cu':round(float(r['cu']),2),'tot':round(float(r['u']*r['cu']),2),
+                'fecha':periodo_label,'pct':round(float(r['u']*r['cu'])/costo_venta*100,4) if costo_venta else 0}
+                for _,r in con_neg.sort_values('tot').iterrows()]
             dep_data['sobrante']=[{'desc':str(r['descripcion'])[:50],'prov':str(r['prov']),
-                'u':int(r['u']),'cu':round(float(r['cu']),2),'tot':round(float(r['u']*r['cu']),2),'fecha':periodo_label,
-                'pct':round(float(r['u']*r['cu'])/costo_venta*100,4) if costo_venta else 0}
-                for _,r in con_pos.sort_values('u',ascending=False).iterrows()]
+                'u':int(r['u']),'cu':round(float(r['cu']),2),'tot':round(float(r['u']*r['cu']),2),
+                'fecha':periodo_label,'pct':round(float(r['u']*r['cu'])/costo_venta*100,4) if costo_venta else 0}
+                for _,r in con_pos.sort_values('tot',ascending=False).iterrows()]
+            # Compensaciones: faltantes que tienen sobrante del mismo tipo de producto
+            comp_list = []
+            for _,fneg in con_neg.iterrows():
+                words_f = set(str(fneg['descripcion']).lower().split()[:2])
+                for _,fpos in con_pos.iterrows():
+                    words_p = set(str(fpos['descripcion']).lower().split()[:2])
+                    if len(words_f & words_p) >= 2:
+                        comp_list.append({
+                            'falt': str(fneg['descripcion'])[:40],
+                            'sobr': str(fpos['descripcion'])[:40],
+                            'u_f': int(abs(fneg['neto'])), 'u_s': int(fpos['neto']),
+                            'tot_f': round(float(fneg['tot']),0),
+                            'tot_s': round(float(fpos['tot']),0)
+                        })
+            # Deduplicate
+            seen = set()
+            comp_dedup = []
+            for c in comp_list:
+                k = c['falt']+'|'+c['sobr']
+                if k not in seen:
+                    seen.add(k); comp_dedup.append(c)
+            dep_data['compensaciones'] = comp_dedup[:30]
         tot_rot=sum(r['tot'] for r in dep_data['roturas'])
         tot_cons=sum(r['tot'] for r in dep_data['consumo'])
         tot_venc=sum(r['tot'] for r in dep_data['vencido'])
