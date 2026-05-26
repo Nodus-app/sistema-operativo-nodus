@@ -175,7 +175,7 @@ motivo_prov = {}
 for p in sorted(vc['proveedor'].dropna().str.strip().unique()):
     dev_p = vc[(vc['tipo_venta']=='Devolucion') & (vc['proveedor'].str.strip()==p)].copy()
     dev_p['motivo_desc'] = dev_p['motivodev'].map(MOTIVO_MAP).fillna('Otro')
-    bmp = dev_p.groupby('motivo_desc').agg(lineas=('Importe','count'),uds=('Cantidad','abs'),isum=('Importe','sum')).reset_index()
+    bmp = dev_p.groupby('motivo_desc').agg(lineas=('Importe','count'),uds=('Cantidad','sum'),isum=('Importe','sum')).reset_index()
     bmp['isum'] = bmp['isum'].abs()
     motivo_prov[str(p)] = [{'motivo':r['motivo_desc'],'lineas':int(r['lineas']),'uds':int(abs(r['uds'])),'imp':round(float(r['isum']),0)}
                             for _,r in bmp.sort_values('isum',ascending=False).iterrows() if r['isum']>0]
