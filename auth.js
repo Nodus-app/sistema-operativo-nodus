@@ -318,12 +318,14 @@ function initDep(){
   var tRot =fRot.reduce(function(s,r){return s+r.tot;},0);
   var tCons=fCons.reduce(function(s,r){return s+r.tot;},0);
   var tVenc=fVenc.reduce(function(s,r){return s+r.tot;},0);
-  var dk=D_DEP.kpis||{};
+  // % CMV calculado sobre los montos filtrados
+  var ventaBase=D_KPIS.imp_venta||1;
+  function pctCMV(v){return ventaBase>0?(' ('+((v/ventaBase)*100).toFixed(2)+'% CMV)'):''}
   document.getElementById('dep-kpis').innerHTML=
-    KPI('$'+F(tFalt-tSobr)+(dk.pct_merma?' ('+Number(dk.pct_merma).toFixed(2)+'% CMV)':''),'Merma Neta',(tFalt-tSobr)>0?'#ef4444':'#34d399')+
-    KPI('$'+F(tRot)+(dk.pct_rot?' ('+Number(dk.pct_rot).toFixed(2)+'% CMV)':''),'Roturas',tRot>0?'#ef4444':'#94a3b8')+
-    KPI('$'+F(tCons)+(dk.pct_cons?' ('+Number(dk.pct_cons).toFixed(2)+'% CMV)':''),'Consumo Interno',tCons>0?'#fb923c':'#94a3b8')+
-    KPI('$'+F(tVenc)+(dk.pct_venc?' ('+Number(dk.pct_venc).toFixed(2)+'% CMV)':''),'Vencido',tVenc>0?'#ef4444':'#94a3b8');
+    KPI('$'+F(tFalt-tSobr)+pctCMV(Math.abs(tFalt-tSobr)),'Merma Neta',(tFalt-tSobr)>0?'#ef4444':'#34d399')+
+    KPI('$'+F(tRot)+pctCMV(tRot),'Roturas',tRot>0?'#ef4444':'#94a3b8')+
+    KPI('$'+F(tCons)+pctCMV(tCons),'Consumo Interno',tCons>0?'#fb923c':'#94a3b8')+
+    KPI('$'+F(tVenc)+pctCMV(tVenc),'Vencido',tVenc>0?'#ef4444':'#94a3b8');
   renderDepTb('dep-falt-tb',dep.faltante);
   renderDepTb('dep-sobr-tb',dep.sobrante);
   renderDepTb('dep-rot-tb', dep.roturas);
