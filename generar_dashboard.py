@@ -60,6 +60,45 @@ def make_chunks(var_name, data, chunk=8000):
         stmts = [f'var {var_name}={json.dumps(data,ensure_ascii=True,separators=(",",":"))};']
     return '\n'.join(stmts)
 
+TERCEROS_LIST = [
+    'CECILIA GONZALEZ','BELEN AGUSTIN','LUIS GUIRAO','EZEQUIEL JUNCOS',
+    'RODRIGO ROMANO','MAURO IRIARTE','PABLO CANELO','GUSTAVO NIETO',
+    'LEONARDO GUEVARA','DUILIO PALLOTTI','TALAVERA ADRIAN','ALLENDE ALEJANDRO JAVIER'
+]
+
+LOC_MAP_COM = {
+    'VILLA CARLOS PAZ':'CARLOS PAZ','LA CUMBRE':'LA CUMBRE + LOS COCOS',
+    'LOS COCOS':'LA CUMBRE + LOS COCOS','BIALET MASSE':'BAILET MASSE',
+    'VILLA CIUDAD DE AMERICA':'VILLA CIUDAD AMERICA',
+    'VILLA CIUDAD PQUE LOS REARTES':'POTRERO + REARTES',
+    'LOS REARTES':'POTRERO + REARTES','COLONIA TIROLESA':'TIROLESA',
+    'SANTA ROSA DE CALAMUCHITA':'SANTA ROSA','VILLA YACANTO':'YACANTO',
+    'VILLA DEL TOTORAL':'TOTORAL','HUERTA GRANDE':'PUNILLA',
+    'SANTA MARIA DE PUNILLA':'PUNILLA','PARQUE SIQUIMAN':'SIQUIMIAN',
+    'MENDIOLAZA':'UNQUILLO','VILLA ALLENDE':'UNQUILLO',
+    'LA CALERA':'CORDOBA','CALERA CENTRAL':'CORDOBA',
+    'MALVINAS ARGENTINAS':'MALVINAS','VILLA BUSTOS':'PUNILLA',
+    'MAYU SUMAJ':'PUNILLA','VILLA AMANCAY':'PUNILLA','CUESTA BLANCA':'PUNILLA',
+    'SAN ANTONIO DE ARREDONDO':'CARLOS PAZ','VILLA SANTA CRUZ DEL LAGO':'CARLOS PAZ',
+    'VILLA RIO YCHO CRUZ':'CARLOS PAZ','CASA GRANDE':'ALTA GRACIA',
+    'JOSE DE LA QUINTANA':'ALTA GRACIA','LA SERRANITA':'ALTA GRACIA',
+    'VILLA CAEIRO':'ALTA GRACIA','VILLA LA BOLSA':'ALTA GRACIA',
+    'VILLA ESQUIU':'ALTA GRACIA','SAN IGNACIO':'ALTA GRACIA',
+    'POTRERO DE GARAY':'POTRERO + REARTES','VILLA DEL LAGO':'CARLOS PAZ',
+    'CHARBONIER':'RIO CEBALLOS','SALDAN':'UNQUILLO','YOCSINA':'UNQUILLO',
+    'SAN ROQUE':'CARLOS PAZ','COMUNA SAN ROQUE':'CARLOS PAZ',
+    'SEBASTIAN ELCANO':'JESUS MARIA','SINSACATE':'JESUS MARIA',
+    'SAN NICOLAS':'COLONIA CAROYA','SAN JOSE DE LA DORMIDA':'DEAN FUNES',
+    'VILLA DE SOTO':'DEAN FUNES','QUILINO':'DEAN FUNES',
+    'RAYO CORTADO':'DEAN FUNES','PUNTA DEL AGUA':'DEAN FUNES',
+    'CORIMAYO':'DEAN FUNES','EL MANZANO':'MINA CLAVERO',
+    'EL PUEBLITO':'MINA CLAVERO','VILLA BERNA':'VILLA GENERAL BELGRANO',
+    'GENERAL PAZ':'JUAREZ CELMAN','LAS PE\u00d1AS':'JESUS MARIA',
+    'LOS MOLINOS':'ALTA GRACIA','CABALANGO':'PUNILLA','JOVITA':'VILLA DE MARIA',
+    'AGUA DE ORO':'AGUA DE ORO','VILLA PARQUE SANTA ANA':'VILLA PARQUE SANTA ANA',
+    'FALDA DEL CARMEN':'FALDA DEL CARMEN','VILLA SANTA MARIA':'VILLA SANTA MARIA',
+}
+
 PEPSICO = 'Pepsico de Argentina SRL'
 MOLINOS = 'MOLINOS RIO DE LA PLATA SA'
 SOFTYS  = 'SOFTYS ARGENTINA SA'
@@ -538,6 +577,94 @@ if mov_path:
 else:
     print("  Movimientos: no encontrado (opcional)")
 
+# ── COMISIONES TERCEROS ───────────────────────────────────────────────────────
+# Lógica: por reparto. Se toma el % MÁS ALTO de todas las localidades del
+# reparto y se aplica sobre el neto total del reparto (venta - dev - cambios).
+# Excepciones fijas: TALAVERA ADRIAN 3%, vendedor 30 → 4%, vendedor 31 → 4%.
+com_data = {'resumen': [], 'repartos': [], 'periodo': PERIODO}
+com_path = find("comisiones.xlsx")
+if com_path:
+    try:
+        com_tbl = pd.read_excel(com_path)
+        tbl = com_tbl[['LOCALIDAD','%']].dropna()
+        tbl['LOCALIDAD'] = tbl['LOCALIDAD'].str.strip().str.upper()
+        loc_pct = dict(zip(tbl['LOCALIDAD'], tbl['%'].astype(float)))
+
+        def _pct_por_loc(loc_raw, chofer, cod_ven):
+            # Reglas fijas por chofer/vendedor
+            if str(chofer).strip() == 'TALAVERA ADRIAN': return 0.03
+            try:
+                cod = int(cod_ven)
+                if cod == 30: return 0.04
+                if cod == 31: return 0.04
+            except: pass
+            # Por localidad
+            loc = str(loc_raw).strip().upper() if loc_raw and str(loc_raw) != 'nan' else ''
+            if 'DESPE' in loc and ('ADERO' in loc or '\u00d1' in loc): return 0.055
+            if 'MALAGUE' in loc: return 0.050
+            if 'U PORA' in loc: return 0.060
+            std = LOC_MAP_COM.get(loc, loc)
+            return loc_pct.get(std, None)
+
+        vc_ter = vc[vc['chofer'].str.strip().isin(TERCEROS_LIST)].copy()
+        vc_ter['_signo'] = vc_ter['tipo_venta'].map({'Venta':1,'Devolucion':-1,'Cambio':-1}).fillna(1)
+        vc_ter['_imp_neto'] = vc_ter['Importe'] * vc_ter['_signo']
+
+        repartos_com = []
+        for (rep_id, chofer), g in vc_ter.groupby(['reparto','chofer']):
+            if pd.isna(rep_id): continue
+            vta  = float(g[g['tipo_venta']=='Venta']['Importe'].sum())
+            dev  = float(g[g['tipo_venta']=='Devolucion']['Importe'].sum())
+            cam  = float(g[g['tipo_venta']=='Cambio']['Importe'].sum())
+            neto = vta - dev - cam
+            # Pct máximo de las localidades del reparto
+            cod_ven = g['cod_ven'].iloc[0]
+            pcts = [_pct_por_loc(loc, chofer, cod_ven)
+                    for loc in g['localidad'].dropna().unique()]
+            pcts = [p for p in pcts if p is not None]
+            pct_max = max(pcts) if pcts else 0.0
+            comision = round(neto * pct_max)
+            locs = ', '.join(sorted(set(str(l) for l in g['localidad'].dropna().unique()))[:5])
+            fecha = str(g['fecha_str'].iloc[0]) if 'fecha_str' in g.columns else ''
+            repartos_com.append({
+                'rep':     int(rep_id),
+                'chofer':  str(chofer).strip(),
+                'fecha':   fecha,
+                'localidades': locs,
+                'pct':     round(pct_max * 100, 1),
+                'venta_bruta': round(vta),
+                'devoluciones': round(dev),
+                'cambios': round(cam),
+                'neto':    round(neto),
+                'comision': comision,
+            })
+
+        # Resumen por chofer
+        resumen_map = {}
+        for r in repartos_com:
+            ch = r['chofer']
+            if ch not in resumen_map:
+                resumen_map[ch] = {'chofer':ch,'venta_bruta':0,'devoluciones':0,'cambios':0,'neto':0,'comision':0,'repartos':0}
+            resumen_map[ch]['venta_bruta']  += r['venta_bruta']
+            resumen_map[ch]['devoluciones'] += r['devoluciones']
+            resumen_map[ch]['cambios']      += r['cambios']
+            resumen_map[ch]['neto']         += r['neto']
+            resumen_map[ch]['comision']     += r['comision']
+            resumen_map[ch]['repartos']     += 1
+
+        for ch in resumen_map:
+            n = resumen_map[ch]['neto']
+            c = resumen_map[ch]['comision']
+            resumen_map[ch]['pct_efectivo'] = round(c/n*100, 2) if n else 0
+
+        com_data['resumen']  = sorted(resumen_map.values(), key=lambda x: -x['comision'])
+        com_data['repartos'] = sorted(repartos_com, key=lambda x: (x['chofer'], x['fecha']))
+        print(f"  Comisiones: {len(com_data['resumen'])} choferes, {len(com_data['repartos'])} repartos")
+    except Exception as e:
+        print(f"  Comisiones: error {e}")
+else:
+    print("  Comisiones: comisiones.xlsx no encontrado (opcional)")
+
 # ── SERIALIZAR ────────────────────────────────────────────────────────────────
 print("\nSerializando...")
 print(f"  Reincidentes: {len(reinc_list)}")
@@ -563,6 +690,7 @@ DATA_JS = '\n'.join([
     conc_js,
     f"var D_DEP={json.dumps(dep_data,ensure_ascii=True,separators=(',',':'))};",
     f"var D_REINC={json.dumps(reinc_list,ensure_ascii=True,separators=(',',':'))};",
+    f"var D_COM={json.dumps(com_data,ensure_ascii=True,separators=(',',':'))};",
 ])
 
 # ── INYECTAR ──────────────────────────────────────────────────────────────────
