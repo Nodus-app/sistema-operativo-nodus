@@ -71,7 +71,6 @@ function initTab(id){
   else if(id==='deposito') initDep();
   else if(id==='ventas') initVentas();
   else if(id==='ruta') initRuta();
-  else if(id==='comisiones') initComisiones();
 }
 function initApp(){
   document.getElementById('hdr-periodo').textContent=D_PERIODO||'';
@@ -645,7 +644,7 @@ function renderConciliacion(){
       return '<tr>'+
         '<td>'+fmtFecha(r.fecha)+'</td>'+
         '<td><strong>'+r.chofer+'</strong></td>'+
-        '<td style="font-size:.75rem">'+(r.razon||r.clientes||'')+'</td>'+
+        '<td style="font-size:.75rem"><span style="color:#63b3ed;font-weight:700;margin-right:6px">'+(r.cliente||'')+'</span>'+(r.razon||r.clientes||'')+'</td>'+
         '<td>'+tipo+'</td>'+
         '<td>'+est+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+(r.resp||'-')+'</td>'+
