@@ -576,7 +576,7 @@ function renderConciliacion(){
     if(!chRank[r.chofer])chRank[r.chofer]={ch:r.chofer,n:0,imp:0};
     chRank[r.chofer].n++; chRank[r.chofer].imp+=r.imp;
   });
-  var rankCh=Object.values(chRank).sort(function(a,b){return b.imp-a.imp;}).slice(0,10);
+  var rankCh=Object.values(chRank).sort(function(a,b){return b.n-a.n;});
   document.getElementById('conc-rank-ch').innerHTML=rankCh.length?
     rankCh.map(function(r,i){
       var urg=r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atenci\u00f3n'):BD('bp','Revisar');
@@ -594,7 +594,7 @@ function renderConciliacion(){
     vRank[v].total++; vRank[v].imp+=r.imp;
     if(!r.resp)vRank[v].sin_resp++;
   });
-  var rankV=Object.values(vRank).sort(function(a,b){return b.sin_resp-a.sin_resp;}).slice(0,10);
+  var rankV=Object.values(vRank).sort(function(a,b){return b.sin_resp-a.sin_resp;});
   document.getElementById('conc-rank-vend').innerHTML=rankV.length?
     rankV.map(function(r,i){
       var pctSin=r.total>0?Math.round(r.sin_resp/r.total*100):0;
@@ -662,4 +662,63 @@ function renderConciliacion(){
         '<td>'+urg+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+r.n+' rechazo'+(r.n>1?'s':'')+' sin documentar</td></tr>';
     }).join(''):'<tr><td colspan="6" class="empty">Sin alertas</td></tr>';
+}
+
+// ── DESCARGA EXCEL ────────────────────────────────────────────────────────────
+// Requiere SheetJS: <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+function dlXLS(rows, headers, filename) {
+  var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, filename + '.xlsx');
+}
+
+function dlConciliacion() {
+  if (!window.D_CONC) return;
+  var rows = D_CONC.app_ges.concat(D_CONC.ges_only).map(function(r) {
+    return [r.fecha, r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
+  });
+  dlXLS(rows, ['Fecha','Chofer','Nro Cliente','Razón Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
+}
+
+function dlCartones() {
+  if (!window.D_CART) return;
+  var rows = D_CART.semanas.flatMap(function(s) {
+    return s.choferes.map(function(c) {
+      return [s.semana, c.chofer, c.salida, c.retorno, c.pct];
+    });
+  });
+  dlXLS(rows, ['Semana','Chofer','B.E. Salida','B.E. Retorno','% Retorno'], 'cartones');
+}
+
+function dlDeposito() {
+  if (!window.D_DEP) return;
+  var rows = (D_DEP.faltante||[]).concat(D_DEP.sobrante||[], D_DEP.roturas||[], D_DEP.consumo||[], D_DEP.vencido||[]).map(function(r) {
+    return [r.tipo||'', r.fecha||'', r.proveedor||'', r.producto||'', r.cantidad||0, r.costo||0, r.importe||0];
+  });
+  dlXLS(rows, ['Tipo','Fecha','Proveedor','Producto','Cantidad','Costo','Importe'], 'deposito');
+}
+
+function dlVentas() {
+  if (!window.D_VENTA) return;
+  var rows = (D_VENTA.choferes||[]).map(function(c) {
+    return [c.chofer, c.pedidos||0, c.entregados||0, c.rechazos||0, c.invendibles||0, c.neto||0];
+  });
+  dlXLS(rows, ['Chofer','Pedidos','Entregados','Rechazos','Invendibles','Neto'], 'ventas');
+}
+
+function dlComisiones() {
+  if (!window.D_COM) return;
+  var rows = D_COM.repartos.map(function(r) {
+    return [r.chofer, r.rep, r.fecha, r.localidades, r.pct+'%', r.venta_bruta, r.devoluciones, r.cambios, r.neto, r.comision];
+  });
+  dlXLS(rows, ['Chofer','Reparto','Fecha','Localidades','% Aplicado','Venta Bruta','Devoluciones','Cambios','Neto','Comisión'], 'comisiones');
+}
+
+function dlRuta() {
+  if (!window.D_RUTA) return;
+  var rows = (D_RUTA.repartos||[]).map(function(r) {
+    return [r.reparto||'', r.chofer||'', r.fecha||'', r.localidad||'', r.clientes||0, r.bultos||0];
+  });
+  dlXLS(rows, ['Reparto','Chofer','Fecha','Localidad','Clientes','Bultos'], 'hoja_de_ruta');
 }
