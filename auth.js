@@ -71,6 +71,7 @@ function initTab(id){
   else if(id==='deposito') initDep();
   else if(id==='ventas') initVentas();
   else if(id==='ruta') initRuta();
+  else if(id==='comisiones') initComisiones();
 }
 function initApp(){
   document.getElementById('hdr-periodo').textContent=D_PERIODO||'';
