@@ -722,3 +722,44 @@ function dlRuta() {
   });
   dlXLS(rows, ['Reparto','Chofer','Fecha','Localidad','Clientes','Bultos'], 'hoja_de_ruta');
 }
+
+// ── DESCARGA EXCEL — RECHAZOS ─────────────────────────────────────────────────
+function dlRejProv() {
+  if (!window.D_PROV) return;
+  var rows = D_PROV.map(function(p) {
+    return [p.prov, p.venta, p.rec, p.rec_pct ? (p.rec_pct*100).toFixed(2)+'%' : '', p.cam, p.cam_pct ? (p.cam_pct*100).toFixed(2)+'%' : '', p.fac, p.no_e, p.efect ? (p.efect*100).toFixed(1)+'%' : ''];
+  });
+  dlXLS(rows, ['Proveedor','Venta ($)','Rechazo ($)','% Rechazo','Cambio ($)','% Cambio','Fac.','No Ent.','Efectividad'], 'rechazos_por_proveedor');
+}
+
+function dlRejMotivo() {
+  var selProv = (document.getElementById('rej-prov-f')||{}).value||'';
+  var mData = (selProv && window.D_MOTIVO_PROV && D_MOTIVO_PROV[selProv]) ? D_MOTIVO_PROV[selProv] : (window.D_MOTIVO||[]);
+  var rows = mData.map(function(m) {
+    return [m.motivo, m.imp, m.uds];
+  });
+  dlXLS(rows, ['Motivo','Importe ($)','Unidades'], 'rechazos_por_motivo' + (selProv ? '_'+selProv.replace(/ /g,'_') : ''));
+}
+
+function dlRejChofer() {
+  if (!window.D_CHPROV) return;
+  var selProv = (document.getElementById('rej-prov-f')||{}).value||'';
+  var rows = [];
+  Object.keys(D_CHPROV).forEach(function(ch) {
+    var cpList = (D_CHPROV[ch]||[]).filter(function(m){ return !selProv || m.prov===selProv; });
+    if (!cpList.length) return;
+    var vv=0,rr=0,ff=0,nn=0;
+    cpList.forEach(function(m){vv+=m.venta;rr+=m.rec;ff+=m.fac;nn+=m.no_e;});
+    rows.push([ch, vv, rr, vv>0?(rr/vv*100).toFixed(2)+'%':'', ff>0?(ff/(ff+nn)*100).toFixed(1)+'%':'']);
+  });
+  rows.sort(function(a,b){ return (parseFloat(b[2])||0)-(parseFloat(a[2])||0); });
+  dlXLS(rows, ['Chofer','Venta ($)','Rechazo ($)','% Rechazo','Efectividad'], 'rechazos_por_chofer');
+}
+
+function dlRejReinc() {
+  if (!window.D_REINC) return;
+  var rows = D_REINC.map(function(r) {
+    return [r.razon, r.loc||'', r.n, r.imp, r.vendedor||'', r.choferes||'', r.fechas||''];
+  });
+  dlXLS(rows, ['Razón Social','Localidad','Cant. Rechazos','Importe ($)','Vendedor','Choferes','Fechas'], 'reincidentes');
+}
