@@ -592,7 +592,7 @@ if com_path:
 
         def _pct_por_loc(loc_raw, chofer, cod_ven):
             # Reglas fijas por chofer/vendedor
-            if str(chofer).strip() == 'TALAVERA ADRIAN': return 0.03
+            if str(chofer).strip() == 'TALAVERA ADRIAN': return 0.05
             try:
                 cod = int(cod_ven)
                 if cod == 30: return 0.04
