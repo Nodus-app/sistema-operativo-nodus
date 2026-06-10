@@ -422,55 +422,61 @@ if app_path:
                 'estado': str(r.get('Estado','')),
             })
         print(f"  App rechazos: {len(app_records)} registros")
-        # Conciliacion: cruce por CLIENTE + FECHA
-        vc['fecha_str_up'] = vc['fecha_str']
-        ges_grp = vc[vc['tipo_venta']=='Devolucion'].groupby(['Cliente','fecha_str']).agg(
-            imp=('importe_neto','sum'),
-            chofer=('chofer','first'),
-            razon=('Razon_Social','first')
-        ).reset_index()
-        ges_grp['imp'] = ges_grp['imp'].abs().round(0)
-        ges_grp['key'] = ges_grp['Cliente'].astype(str) + '_' + ges_grp['fecha_str']
-        ges_dict = {r['key']:{'cliente':str(r['Cliente']),'razon':str(r['razon'])[:35],
-                              'chofer':str(r['chofer']),'fecha':str(r['fecha_str']),
-                              'imp':float(r['imp'])}
-                    for _,r in ges_grp.iterrows()}
+        # Conciliacion: cliente + chofer + fecha con ventana +2 dias habiles (sin domingo)
+        from datetime import timedelta as _td
 
-        # App: use CLIENTE code + fecha as key
-        app['cliente_str'] = app['CLIENTE'].astype(str).str.strip() if 'CLIENTE' in app.columns else ''
-        app['key'] = app['cliente_str'] + '_' + app['fecha_str']
-        app_dict = {}
-        for _,r in app.iterrows():
-            cli = str(r.get('CLIENTE','')) if pd.notna(r.get('CLIENTE')) else ''
-            if not cli or cli in ('nan',''):
-                continue
-            k = cli + '_' + str(r['fecha_str'])
-            if k not in app_dict:
-                app_dict[k] = {
-                    'cliente': cli,
-                    'chofer':  str(r['chofer_ges']),
-                    'fecha':   str(r['fecha_str']),
-                    'motivo':  str(r.get('Motivo','')),
-                    'vendedor':str(r.get('Vendedor','')),
-                    'resp':    str(r.get('Respuesta Vendedor','')) if pd.notna(r.get('Respuesta Vendedor')) else '',
-                    'estado':  str(r.get('Estado','')),
-                    'n': 0
-                }
-            app_dict[k]['n'] += 1
+        def add_biz_days(fecha, days):
+            d = fecha
+            added = 0
+            while added < days:
+                d += _td(days=1)
+                if d.weekday() != 6:
+                    added += 1
+            return d
 
-        app_keys = set(app_dict.keys()); ges_keys = set(ges_dict.keys())
-        for k in app_keys & ges_keys:
-            g = ges_dict[k]
-            conc_data['app_ges'].append({**app_dict[k],'imp':g['imp'],'razon':g['razon']})
-        for k in app_keys - ges_keys:
-            conc_data['app_only'].append({**app_dict[k],'imp':0,'razon':''})
-        for k in ges_keys - app_keys:
-            g = ges_dict[k]
-            conc_data['ges_only'].append({'cliente':g['cliente'],'razon':g['razon'],
-                'chofer':g['chofer'],'fecha':g['fecha'],'imp':g['imp']})
+        ges_dev = vc[vc['tipo_venta']=='Devolucion'].copy()
+        ges_dev['chofer_up'] = ges_dev['chofer'].str.strip().str.upper()
+        ges_idx = {}
+        for _, r in ges_dev.iterrows():
+            if not pd.notna(r['Fecha']): continue
+            key = (str(r['Cliente']), r['chofer_up'], r['Fecha'].date())
+            if key not in ges_idx:
+                ges_idx[key] = {'imp':0,'razon':str(r['Razon_Social'])[:35],'chofer':str(r['chofer']),'fecha':str(r['fecha_str'])}
+            ges_idx[key]['imp'] += abs(float(r['Importe']))
+
+        app_valid = app[app['CLIENTE'].notna() & (app['CLIENTE'].astype(str).str.strip()!='')].copy()
+        app_valid['cliente_str'] = app_valid['CLIENTE'].astype(str).str.strip()
+        matched_ges_keys = set()
+
+        for _, row in app_valid.iterrows():
+            cli = str(row['cliente_str'])
+            ch  = str(row['chofer_ges'])
+            fec = row['Fecha'].date() if pd.notna(row['Fecha']) else None
+            rec = {'cliente':cli,'chofer':ch,'fecha':str(fec) if fec else '',
+                   'motivo':str(row.get('Motivo','')),'vendedor':str(row.get('Vendedor','')),
+                   'resp':str(row.get('Respuesta Vendedor','')) if pd.notna(row.get('Respuesta Vendedor')) else '',
+                   'estado':str(row.get('Estado',''))}
+            if not fec:
+                conc_data['app_only'].append({**rec,'imp':0,'razon':''}); continue
+            found = None
+            for delta in range(3):
+                check = add_biz_days(pd.Timestamp(fec), delta).date() if delta>0 else fec
+                key = (cli, ch, check)
+                if key in ges_idx and key not in matched_ges_keys:
+                    found = key; break
+            if found:
+                matched_ges_keys.add(found)
+                g = ges_idx[found]
+                conc_data['app_ges'].append({**rec,'imp':round(g['imp'],0),'razon':g['razon'],'fecha_ges':g['fecha']})
+            else:
+                conc_data['app_only'].append({**rec,'imp':0,'razon':''})
+
+        for k,g in ges_idx.items():
+            if k not in matched_ges_keys:
+                conc_data['ges_only'].append({'cliente':str(k[0]),'razon':g['razon'],'chofer':g['chofer'],'fecha':g['fecha'],'imp':round(g['imp'],0)})
         with_resp = sum(1 for r in conc_data['app_ges'] if r.get('resp',''))
         sin_resp  = sum(1 for r in conc_data['app_ges'] if not r.get('resp',''))
-        pct_saved = round(len(conc_data['app_only'])/len(app_dict)*100,1) if len(app_dict)>0 else 0
+        pct_saved = round(len(conc_data['app_only'])/len(app_valid)*100,1) if len(app_valid)>0 else 0
         conc_data['kpis'] = {
             'app_ges':len(conc_data['app_ges']),'app_only':len(conc_data['app_only']),'ges_only':len(conc_data['ges_only']),
             'imp_app_ges':round(sum(r['imp'] for r in conc_data['app_ges']),0),
