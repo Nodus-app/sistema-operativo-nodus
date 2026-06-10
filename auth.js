@@ -125,14 +125,14 @@ function renderCart(){
     var label=vista==='dia'?fmtFecha(r.fecha):vista==='sem'?'Sem '+r.semana:'';
     return '<tr><td><strong>'+r.chofer+'</strong></td><td>'+label+'</td><td>'+r.semana+'</td>'+
       '<td style="text-align:right">'+r.bs+'</td><td style="text-align:right">'+r.bi+'</td>'+
-      '<td>'+PR(pct,'#34d399',1)+' '+P(pct)+'</td><td>'+est+'</td></tr>';
+      '<td>'+PR(pct,'#00ff88',1)+' '+P(pct)+'</td><td>'+est+'</td></tr>';
   }).join('');
   document.getElementById('cart-tbody').innerHTML=tbl||'<tr><td colspan="7" class="empty">Sin datos de cartones</td></tr>';
   var pctT=tot_bs>0?tot_bi/tot_bs:0;
   document.getElementById('cart-kpis').innerHTML=
-    KPI(tot_bs,'B.E. Salida','#e2e8f0')+
-    KPI(tot_bi,'B.E. Retorno','#e2e8f0')+
-    KPI(P(pctT),'% Retorno',pctT>=0.9?'#34d399':pctT>=0.7?'#fb923c':'#ef4444');
+    KPI(tot_bs,'B.E. Salida','#a0c8e8')+
+    KPI(tot_bi,'B.E. Retorno','#a0c8e8')+
+    KPI(P(pctT),'% Retorno',pctT>=0.9?'#00ff88':pctT>=0.7?'#ff9500':'#ff3366');
 }
 
 // \u2500\u2500 RECHAZOS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -162,25 +162,25 @@ function renderRejAll(){
   var tonTotal=(pm.reduce(function(s,p){return s+(p.kg||0);},0)/1000).toFixed(1);
 
   document.getElementById('rej-kpis').innerHTML=
-    KPI('$'+F(vT),'Venta Neta','#34d399')+
-    KPI(tonTotal+' tn','Toneladas','#3b82f6')+
-    KPI('$'+F(rT),'Rechazo ($)','#ef4444')+
-    KPI(P2(vT>0?rT/vT:0),'% Rechazo',(vT>0&&rT/vT>.03)?'#ef4444':'#fb923c')+
-    KPI(String(fT),'Pedidos Facturados','#e2e8f0')+
-    KPI(String(nT),'No Entregados',nT>0?'#ef4444':'#34d399')+
-    KPI(P(eT),'Efectividad',eT<0.95?'#ef4444':'#34d399')+
-    KPI(String(D_REINC.length),'Reincidentes','#fb923c');
+    KPI('$'+F(vT),'Venta Neta','#00ff88')+
+    KPI(tonTotal+' tn','Toneladas','#00d4ff')+
+    KPI('$'+F(rT),'Rechazo ($)','#ff3366')+
+    KPI(P2(vT>0?rT/vT:0),'% Rechazo',(vT>0&&rT/vT>.03)?'#ff3366':'#ff9500')+
+    KPI(String(fT),'Pedidos Facturados','#a0c8e8')+
+    KPI(String(nT),'No Entregados',nT>0?'#ff3366':'#00ff88')+
+    KPI(P(eT),'Efectividad',eT<0.95?'#ff3366':'#00ff88')+
+    KPI(String(D_REINC.length),'Reincidentes','#ff9500');
 
   document.getElementById('rej-prov-tb').innerHTML=pm.length?
     pm.sort(function(a,b){return b.venta-a.venta;}).map(function(p){
       return '<tr><td><strong>'+p.prov+'</strong></td>'+
         '<td style="text-align:right">$'+F(p.venta)+'</td>'+
         '<td style="text-align:right;color:#ef4444">$'+F(p.rec)+'</td>'+
-        '<td>'+PR(p.rec_pct,'#ef4444',0.05)+' '+P2(p.rec_pct)+'</td>'+
+        '<td>'+PR(p.rec_pct,'#ff3366',0.05)+' '+P2(p.rec_pct)+'</td>'+
         '<td style="text-align:right;color:#fb923c">$'+F(p.cam)+'</td>'+
         '<td>'+P2(p.cam_pct)+'</td>'+
         '<td style="text-align:right">'+p.fac+'</td>'+
-        '<td style="text-align:right;color:'+(p.no_e>0?'#ef4444':'#34d399')+'">'+p.no_e+'</td>'+
+        '<td style="text-align:right;color:'+(p.no_e>0?'#ff3366':'#00ff88')+'">'+p.no_e+'</td>'+
         '<td>'+P(p.efect)+'</td></tr>';
     }).join(''):'<tr><td colspan="9" class="empty">Sin datos</td></tr>';
 
@@ -189,7 +189,7 @@ function renderRejAll(){
   document.getElementById('rej-mot-tb').innerHTML=mData.length?
     mData.map(function(m,idx){
       var pct=totImp>0?m.imp/totImp:0;
-      var colors=['#ef4444','#f97316','#f59e0b','#84cc16','#22d3ee','#818cf8','#e879f9','#fb7185','#94a3b8'];
+      var colors=['#ff3366','#f97316','#f59e0b','#84cc16','#22d3ee','#4d9fff','#e879f9','#fb7185','#94a3b8'];
       var col=colors[idx%colors.length];
       var barW=Math.round(pct*100);
       return '<tr>'+
@@ -240,7 +240,7 @@ function renderRejAll(){
       return '<tr><td><strong>'+c.lbl+'</strong></td>'+
         '<td style="text-align:right">$'+F(c.vv)+'</td>'+
         '<td style="text-align:right;color:#ef4444">$'+F(c.rr)+'</td>'+
-        '<td>'+PR(c.pRec,'#ef4444',0.05)+' '+P2(c.pRec)+'</td>'+
+        '<td>'+PR(c.pRec,'#ff3366',0.05)+' '+P2(c.pRec)+'</td>'+
         '<td>'+P(c.ef)+'</td></tr>';
     }).join(''):'<tr><td colspan="5" class="empty">Sin datos</td></tr>';
 
@@ -298,7 +298,7 @@ function initDep(){
         '<td style="text-align:right;color:#ef4444">'+c.u_f+' uds / $'+F(Math.abs(c.tot_f))+'</td>'+
         '<td style="color:#34d399">'+c.sobr+'</td>'+
         '<td style="text-align:right;color:#34d399">'+c.u_s+' uds / $'+F(c.tot_s)+'</td>'+
-        '<td style="text-align:right;color:'+(neto<0?'#ef4444':'#34d399')+'">$'+F(neto)+'</td></tr>';
+        '<td style="text-align:right;color:'+(neto<0?'#ff3366':'#00ff88')+'">$'+F(neto)+'</td></tr>';
     }).join(''):'<tr><td colspan="5" class="empty">Sin compensaciones detectadas</td></tr>';
   }
   var noteEl=document.getElementById('dep-note');
@@ -313,10 +313,10 @@ function initDep(){
   var totCons=dep.consumo.reduce(function(s,r){return s+r.tot;},0);
   var totVenc=dep.vencido.reduce(function(s,r){return s+r.tot;},0);
   document.getElementById('dep-kpis').innerHTML=
-    KPI('$'+F(totFalt-totSobr),'Merma Neta',(totFalt-totSobr)>0?'#ef4444':'#34d399')+
-    KPI('$'+F(totRot),'Roturas',totRot>0?'#ef4444':'#94a3b8')+
-    KPI('$'+F(totCons),'Consumo Interno',totCons>0?'#fb923c':'#94a3b8')+
-    KPI('$'+F(totVenc),'Vencido',totVenc>0?'#ef4444':'#94a3b8');
+    KPI('$'+F(totFalt-totSobr),'Merma Neta',(totFalt-totSobr)>0?'#ff3366':'#00ff88')+
+    KPI('$'+F(totRot),'Roturas',totRot>0?'#ff3366':'#94a3b8')+
+    KPI('$'+F(totCons),'Consumo Interno',totCons>0?'#ff9500':'#94a3b8')+
+    KPI('$'+F(totVenc),'Vencido',totVenc>0?'#ff3366':'#94a3b8');
   var selDepProv=(document.getElementById('dep-prov-f')||{}).value||'';
   function filterDep(rows){
     return selDepProv?rows.filter(function(r){return r.prov===selDepProv;}):rows;
@@ -348,10 +348,10 @@ function initDep(){
   function pctCMV(v){return cmvBase>0?(' ('+((v/cmvBase)*100).toFixed(2)+'% CMV)'):''}
   document.getElementById('dep-kpis').innerHTML=
     KPI('$'+F(cmvBase),'CMV (Base c\u00e1lculo)','#63b3ed')+
-    KPI('$'+F(tFalt-tSobr)+pctCMV(Math.abs(tFalt-tSobr)),'Merma Neta',(tFalt-tSobr)>0?'#ef4444':'#34d399')+
-    KPI('$'+F(tRot)+pctCMV(tRot),'Roturas',tRot>0?'#ef4444':'#94a3b8')+
-    KPI('$'+F(tCons)+pctCMV(tCons),'Consumo Interno',tCons>0?'#fb923c':'#94a3b8')+
-    KPI('$'+F(tVenc)+pctCMV(tVenc),'Vencido',tVenc>0?'#ef4444':'#94a3b8');
+    KPI('$'+F(tFalt-tSobr)+pctCMV(Math.abs(tFalt-tSobr)),'Merma Neta',(tFalt-tSobr)>0?'#ff3366':'#00ff88')+
+    KPI('$'+F(tRot)+pctCMV(tRot),'Roturas',tRot>0?'#ff3366':'#94a3b8')+
+    KPI('$'+F(tCons)+pctCMV(tCons),'Consumo Interno',tCons>0?'#ff9500':'#94a3b8')+
+    KPI('$'+F(tVenc)+pctCMV(tVenc),'Vencido',tVenc>0?'#ff3366':'#94a3b8');
   renderDepTb('dep-falt-tb',dep.faltante);
   renderDepTb('dep-sobr-tb',dep.sobrante);
   renderDepTb('dep-rot-tb', dep.roturas);
@@ -378,12 +378,12 @@ function renderVentas(){
   var nT=pm.reduce(function(s,p){return s+p.no_e;},0);
   var eT=fT>0?fT/(fT+nT):0;
   document.getElementById('ven-kpis').innerHTML=
-    KPI('$'+F(vT),'Venta Neta','#34d399')+
-    KPI('$'+F(rT),'Rechazo ($)','#ef4444')+
-    KPI(P2(vT>0?rT/vT:0),'% Rechazo',(vT>0&&rT/vT>.03)?'#ef4444':'#fb923c')+
-    KPI(String(fT),'Pedidos Facturados','#e2e8f0')+
-    KPI(String(nT),'No Entregados',nT>0?'#ef4444':'#34d399')+
-    KPI(P(eT),'Efectividad',eT<0.95?'#ef4444':'#34d399');
+    KPI('$'+F(vT),'Venta Neta','#00ff88')+
+    KPI('$'+F(rT),'Rechazo ($)','#ff3366')+
+    KPI(P2(vT>0?rT/vT:0),'% Rechazo',(vT>0&&rT/vT>.03)?'#ff3366':'#ff9500')+
+    KPI(String(fT),'Pedidos Facturados','#a0c8e8')+
+    KPI(String(nT),'No Entregados',nT>0?'#ff3366':'#00ff88')+
+    KPI(P(eT),'Efectividad',eT<0.95?'#ff3366':'#00ff88');
   document.getElementById('ven-prov-tb').innerHTML=pm.length?
     pm.sort(function(a,b){return b.venta-a.venta;}).map(function(p){
       return '<tr><td><strong>'+p.prov+'</strong></td>'+
@@ -477,9 +477,9 @@ function renderSB(){
     var rejTag=rejCount?'<span style="color:#ef4444">\u26a0 '+rejCount+' rej total</span>':'';
     var totProv=r.pep+r.mol+r.sof+r.oth||1;
     var bar='<div class="provbar">'+
-      (r.pep?'<div style="flex:'+(r.pep/totProv)+';background:#3b82f6"></div>':'')+
+      (r.pep?'<div style="flex:'+(r.pep/totProv)+';background:#0066ff"></div>':'')+
       (r.mol?'<div style="flex:'+(r.mol/totProv)+';background:#8b5cf6"></div>':'')+
-      (r.sof?'<div style="flex:'+(r.sof/totProv)+';background:#10b981"></div>':'')+
+      (r.sof?'<div style="flex:'+(r.sof/totProv)+';background:#00cc66"></div>':'')+
       (r.oth?'<div style="flex:'+(r.oth/totProv)+';background:#475569"></div>':'')+
     '</div>';
     return '<div class="ri'+(on?' on':'"')+'" onclick="selR('+r.rep+')">'+
@@ -491,7 +491,7 @@ function renderSB(){
         (r.kg?'<span>'+r.kg.toFixed(1)+' kg</span>':'')+
         rejTag+
       '</div>'+
-      '<div style="font-size:.8rem;font-weight:700;color:#e2e8f0;margin-top:4px">$'+F(r.tot)+'</div>'+
+      '<div style="font-size:.9rem;font-weight:800;color:#00d4ff;margin-top:4px">$'+F(r.tot)+'</div>'+
       bar+'</div>';
   }).join('');
 }
@@ -522,9 +522,9 @@ function selR(rep){
       (r.oth?'<div class="kpi" style="min-width:90px;border-color:#475569"><div class="kpi-v" style="color:#94a3b8;font-size:1rem">$'+F(r.oth)+'</div><div class="kpi-l">Otros</div></div>':'')+
     '</div>'+
     '<div class="provbar" style="height:8px;margin-top:8px;border-radius:4px">'+
-      (r.pep?'<div style="flex:'+(r.pep/totProv)+';background:#3b82f6"></div>':'')+
+      (r.pep?'<div style="flex:'+(r.pep/totProv)+';background:#0066ff"></div>':'')+
       (r.mol?'<div style="flex:'+(r.mol/totProv)+';background:#8b5cf6"></div>':'')+
-      (r.sof?'<div style="flex:'+(r.sof/totProv)+';background:#10b981"></div>':'')+
+      (r.sof?'<div style="flex:'+(r.sof/totProv)+';background:#00cc66"></div>':'')+
       (r.oth?'<div style="flex:'+(r.oth/totProv)+';background:#475569"></div>':'')+
     '</div>'+
     '</div>';
@@ -563,13 +563,13 @@ function renderConciliacion(){
 
   // KPIs
   document.getElementById('conc-kpis').innerHTML=
-    KPI(String(k.total_app||0),'Rechazos en App','#e2e8f0')+
-    KPI(String(k.app_ges||0)+' / $'+F(k.imp_app_ges||0),'\ud83d\udd34 App+Gescom (gestion\u00f3 y se perdi\u00f3)','#ef4444')+
-    KPI(String(k.app_only||0),'\ud83d\udfe2 App sin Gescom (se salv\u00f3)','#34d399')+
-    KPI(String(k.ges_only||0)+' / $'+F(k.imp_ges_only||0),'\u26ab Gescom sin App (sin gesti\u00f3n)','#64748b')+
-    KPI(String(k.with_resp||0),'Vendedores con respuesta','#3b82f6')+
-    KPI(String(k.sin_resp||0),'Vendedores sin respuesta','#fb923c')+
-    KPI((k.pct_saved||0)+'%','% Gestiones salvadas','#34d399');
+    KPI(String(k.total_app||0),'Rechazos en App','#a0c8e8')+
+    KPI(String(k.app_ges||0)+' / $'+F(k.imp_app_ges||0),'\ud83d\udd34 App+Gescom (gestion\u00f3 y se perdi\u00f3)','#ff3366')+
+    KPI(String(k.app_only||0),'\ud83d\udfe2 App sin Gescom (se salv\u00f3)','#00ff88')+
+    KPI(String(k.ges_only||0)+' / $'+F(k.imp_ges_only||0),'\u26ab Gescom sin App (sin gesti\u00f3n)','#2a5a7a')+
+    KPI(String(k.with_resp||0),'Vendedores con respuesta','#00d4ff')+
+    KPI(String(k.sin_resp||0),'Vendedores sin respuesta','#ff9500')+
+    KPI((k.pct_saved||0)+'%','% Gestiones salvadas','#00ff88');
 
   // Ranking choferes (por importe sin gestion)
   var chRank={};
@@ -599,7 +599,7 @@ function renderConciliacion(){
   document.getElementById('conc-rank-vend').innerHTML=rankV.length?
     rankV.map(function(r,i){
       var pctSin=r.total>0?Math.round(r.sin_resp/r.total*100):0;
-      var col=pctSin>70?'#ef4444':pctSin>40?'#fb923c':'#34d399';
+      var col=pctSin>70?'#ff3366':pctSin>40?'#ff9500':'#00ff88';
       return '<tr><td>'+(i+1)+'</td><td><strong>'+r.v+'</strong></td>'+
         '<td style="text-align:right">'+r.total+'</td>'+
         '<td style="text-align:right;color:#ef4444">'+r.sin_resp+'</td>'+
@@ -665,7 +665,7 @@ function renderConciliacion(){
     }).join(''):'<tr><td colspan="6" class="empty">Sin alertas</td></tr>';
 }
 
-// ── DESCARGA EXCEL ────────────────────────────────────────────────────────────
+// \u2500\u2500 DESCARGA EXCEL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 // Requiere SheetJS: <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 function dlXLS(rows, headers, filename) {
   var ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
@@ -679,7 +679,7 @@ function dlConciliacion() {
   var rows = D_CONC.app_ges.concat(D_CONC.ges_only).map(function(r) {
     return [r.fecha, r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
   });
-  dlXLS(rows, ['Fecha','Chofer','Nro Cliente','Razón Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
+  dlXLS(rows, ['Fecha','Chofer','Nro Cliente','Raz\u00f3n Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
 }
 
 function dlCartones() {
@@ -713,7 +713,7 @@ function dlComisiones() {
   var rows = D_COM.repartos.map(function(r) {
     return [r.chofer, r.rep, r.fecha, r.localidades, r.pct+'%', r.venta_bruta, r.devoluciones, r.cambios, r.neto, r.comision];
   });
-  dlXLS(rows, ['Chofer','Reparto','Fecha','Localidades','% Aplicado','Venta Bruta','Devoluciones','Cambios','Neto','Comisión'], 'comisiones');
+  dlXLS(rows, ['Chofer','Reparto','Fecha','Localidades','% Aplicado','Venta Bruta','Devoluciones','Cambios','Neto','Comisi\u00f3n'], 'comisiones');
 }
 
 function dlRuta() {
@@ -724,7 +724,7 @@ function dlRuta() {
   dlXLS(rows, ['Reparto','Chofer','Fecha','Localidad','Clientes','Bultos'], 'hoja_de_ruta');
 }
 
-// ── DESCARGA EXCEL — RECHAZOS ─────────────────────────────────────────────────
+// \u2500\u2500 DESCARGA EXCEL \u2014 RECHAZOS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function dlRejProv() {
   if (!window.D_PROV) return;
   var rows = D_PROV.map(function(p) {
@@ -762,5 +762,5 @@ function dlRejReinc() {
   var rows = D_REINC.map(function(r) {
     return [r.razon, r.loc||'', r.n, r.imp, r.vendedor||'', r.choferes||'', r.fechas||''];
   });
-  dlXLS(rows, ['Razón Social','Localidad','Cant. Rechazos','Importe ($)','Vendedor','Choferes','Fechas'], 'reincidentes');
+  dlXLS(rows, ['Raz\u00f3n Social','Localidad','Cant. Rechazos','Importe ($)','Vendedor','Choferes','Fechas'], 'reincidentes');
 }
