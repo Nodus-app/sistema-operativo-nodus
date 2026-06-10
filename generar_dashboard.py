@@ -387,7 +387,7 @@ if cart_path:
             cart['fecha_str'] = cart['FechaSalidaCamion'].dt.strftime('%Y-%m-%d')
             cart['semana']    = cart['FechaSalidaCamion'].dt.isocalendar().week.astype(int)
             for _,r in cart.iterrows():
-                bs=si(r.get('cajasbienret',0)); bi=si(r.get('cajasbienretdev',0))
+                bs=si(r.get('cajasret',0)); bi=si(r.get('cajasretdev',0))
                 cart_records.append({'chofer':str(r.get('razon_social','')).strip(),
                     'fecha':str(r['fecha_str']),'semana':int(r['semana']),
                     'b_sal':bs,'b_ing':bi,'retorno':round(bi/bs,4) if bs>0 else 0})
