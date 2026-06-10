@@ -566,10 +566,16 @@ if mov_path:
         tot_falt=sum(r['tot'] for r in dep_data['faltante'])
         tot_sobr=sum(r['tot'] for r in dep_data['sobrante'])
         dep_data['kpis']={
+            'cmv':      round(costo_venta,0),
             'pct_rot':  round(tot_rot/costo_venta*100,4) if costo_venta else 0,
             'pct_cons': round(tot_cons/costo_venta*100,4) if costo_venta else 0,
             'pct_venc': round(tot_venc/costo_venta*100,4) if costo_venta else 0,
             'pct_merma':round((tot_falt-tot_sobr)/costo_venta*100,4) if costo_venta else 0,
+            'tot_rot':  round(tot_rot,0),
+            'tot_cons': round(tot_cons,0),
+            'tot_venc': round(tot_venc,0),
+            'tot_falt': round(tot_falt,0),
+            'tot_sobr': round(tot_sobr,0),
         }
         print(f"  Deposito: {len(dep_data['faltante'])} falt, {len(dep_data['sobrante'])} sobr, {len(dep_data['roturas'])} rot, {len(dep_data['consumo'])} cons, {len(dep_data['vencido'])} venc")
     except Exception as e:

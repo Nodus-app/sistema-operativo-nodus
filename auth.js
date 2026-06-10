@@ -341,12 +341,13 @@ function initDep(){
   var tRot =fRot.reduce(function(s,r){return s+r.tot;},0);
   var tCons=fCons.reduce(function(s,r){return s+r.tot;},0);
   var tVenc=fVenc.reduce(function(s,r){return s+r.tot;},0);
-  // % CMV sobre venta del proveedor seleccionado (o total si no hay filtro)
-  var ventaBase=selDepProv?
-    (D_PROV.find(function(p){return p.prov===selDepProv;})||{}).venta||1 :
-    D_KPIS.imp_venta||1;
-  function pctCMV(v){return ventaBase>0?(' ('+((v/ventaBase)*100).toFixed(2)+'% CMV)'):''}
+  // CMV base de calculo
+  var cmvBase=selDepProv?
+    (D_PROV.find(function(p){return p.prov===selDepProv;})||{}).venta||0 :
+    (D_DEP.kpis&&D_DEP.kpis.cmv?D_DEP.kpis.cmv:D_KPIS.imp_venta||0);
+  function pctCMV(v){return cmvBase>0?(' ('+((v/cmvBase)*100).toFixed(2)+'% CMV)'):''}
   document.getElementById('dep-kpis').innerHTML=
+    KPI('$'+F(cmvBase),'CMV (Base c\u00e1lculo)','#63b3ed')+
     KPI('$'+F(tFalt-tSobr)+pctCMV(Math.abs(tFalt-tSobr)),'Merma Neta',(tFalt-tSobr)>0?'#ef4444':'#34d399')+
     KPI('$'+F(tRot)+pctCMV(tRot),'Roturas',tRot>0?'#ef4444':'#94a3b8')+
     KPI('$'+F(tCons)+pctCMV(tCons),'Consumo Interno',tCons>0?'#fb923c':'#94a3b8')+
