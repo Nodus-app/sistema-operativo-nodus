@@ -643,15 +643,17 @@ function renderConciliacion(){
       var r=x.data; var isGO=x.type==='go';
       var est=isGO?BD('br','Sin App'):(r.resp?BD('bg','Con respuesta'):BD('br','Sin respuesta'));
       var tipo=isGO?BD('by','Sin gesti\u00f3n'):BD('br','App+Gescom');
+      var fechaGes = (x.type==='ag' && r.fecha_ges && r.fecha_ges!==r.fecha) ? '<span style="color:#f6ad55">'+fmtFecha(r.fecha_ges)+'</span>' : (x.type==='ag'?fmtFecha(r.fecha_ges||r.fecha):'-');
       return '<tr>'+
         '<td>'+fmtFecha(r.fecha)+'</td>'+
+        '<td>'+fechaGes+'</td>'+
         '<td><strong>'+r.chofer+'</strong></td>'+
         '<td style="font-size:.75rem"><span style="color:#63b3ed;font-weight:700;margin-right:6px">'+(r.cliente||'')+'</span>'+(r.razon||r.clientes||'')+'</td>'+
         '<td>'+tipo+'</td>'+
         '<td>'+est+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+(r.resp||'-')+'</td>'+
         '<td style="text-align:right;color:#ef4444">$'+F(r.imp)+'</td></tr>';
-    }).join(''):'<tr><td colspan="7" class="empty">Sin datos</td></tr>';
+    }).join(''):'<tr><td colspan="8" class="empty">Sin datos</td></tr>';
 
   // Plan de accion
   document.getElementById('plan-tbody').innerHTML=rankCh.length?
@@ -677,9 +679,9 @@ function dlXLS(rows, headers, filename) {
 function dlConciliacion() {
   if (!window.D_CONC) return;
   var rows = D_CONC.app_ges.concat(D_CONC.ges_only).map(function(r) {
-    return [r.fecha, r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
+    return [r.fecha, r.fecha_ges||'', r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
   });
-  dlXLS(rows, ['Fecha','Chofer','Nro Cliente','Raz\u00f3n Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
+  dlXLS(rows, ['Fecha App','Fecha Gescom','Chofer','Nro Cliente','Raz\u00f3n Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
 }
 
 function dlCartones() {

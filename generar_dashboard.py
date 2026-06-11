@@ -731,6 +731,71 @@ else:
         html = html[:body_end] + '\n<script><!-- DATA_START -->\n' + DATA_JS + '\n<!-- DATA_END --></script>\n' + html[body_end:]
         print(f"  Datos inyectados antes de </body>: {len(DATA_JS)//1024}KB")
 
+# ── INYECTAR SheetJS si no está ───────────────────────────────────────────────
+SHEETJS = '<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>'
+if 'xlsx.full.min.js' not in html:
+    html = html.replace('<script src="auth.js"></script>', SHEETJS + '\n<script src="auth.js"></script>')
+
+# ── INYECTAR BOTONES EXCEL ────────────────────────────────────────────────────
+BTN = lambda fn, label='&#11015; Excel': (
+    f'<button onclick="{fn}()" style="background:#1a4731;color:#34d399;'
+    f'border:1px solid #34d399;border-radius:6px;padding:3px 10px;'
+    f'font-size:.76rem;cursor:pointer;margin-left:8px">{label}</button>'
+)
+BTNS = [
+    # (texto a buscar, texto a reemplazar)
+    ('<h3>Rechazo por Proveedor</h3>',
+     f'<h3>Rechazo por Proveedor {BTN("dlRejProv")}</h3>'),
+    ('<h3>Clientes Reincidentes</h3>',
+     f'<h3>Clientes Reincidentes {BTN("dlRejReinc")}</h3>'),
+    ('<h3>Retorno por Chofer</h3>',
+     f'<h3>Retorno por Chofer {BTN("dlCartones")}</h3>'),
+    ('&#128203; Detalle Conciliaci&#243;n',
+     f'&#128203; Detalle Conciliaci&#243;n {BTN("dlConciliacion")}'),
+    ('Diferencias de Inventario</div>',
+     f'Diferencias de Inventario {BTN("dlDeposito")}</div>'),
+    ('Resumen por Chofer</div>',
+     f'Resumen por Chofer {BTN("dlComisiones")}</div>'),
+]
+# Por motivo y por chofer en rechazos — buscar por id de panel
+html = html.replace(
+    '<div id="rp-motivo"',
+    f'<div id="rp-motivo" data-dl="motivo"'
+).replace(
+    '<div id="rp-chofer"',
+    f'<div id="rp-chofer" data-dl="chofer"'
+)
+# Botones motivo y chofer — buscar h3 dentro de esos paneles
+import re
+html = re.sub(
+    r'(<div id="rp-motivo"[^>]*>.*?<h3>)(Por Motivo)(</h3>)',
+    lambda m: m.group(1) + 'Por Motivo ' + BTN('dlRejMotivo') + m.group(3),
+    html, flags=re.DOTALL
+)
+html = re.sub(
+    r'(<div id="rp-chofer"[^>]*>.*?<h3>)(Por Chofer)(</h3>)',
+    lambda m: m.group(1) + 'Por Chofer ' + BTN('dlRejChofer') + m.group(3),
+    html, flags=re.DOTALL
+)
+# Ventas — botón antes del primer fbar en sec-ventas
+html = re.sub(
+    r'(<div class="sec"[^>]*id="sec-ventas"[^>]*>)\s*(<div class="fbar")',
+    lambda m: m.group(1) + f'\n    <div style="text-align:right;margin-bottom:6px">{BTN("dlVentas")}</div>\n    ' + m.group(2),
+    html, count=1
+)
+# Ruta — botón en fbar
+html = re.sub(
+    r'(id="sec-ruta"[^>]*>.*?oninput="filtRuta\(\)"[^>]*>)',
+    lambda m: m.group(1) + BTN('dlRuta'),
+    html, count=1, flags=re.DOTALL
+)
+for old, new in BTNS:
+    if old in html and new not in html:
+        html = html.replace(old, new, 1)
+
+btn_count = html.count('dlRej') + html.count('dlCart') + html.count('dlConc') + html.count('dlDep') + html.count('dlVent') + html.count('dlCom') + html.count('dlRuta')
+print(f"  Botones Excel inyectados: {btn_count} referencias")
+
 build_ts = str(int(datetime.now().timestamp()))
 html = html.replace('__BUILD_TS__', build_ts)
 
