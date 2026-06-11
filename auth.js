@@ -604,10 +604,12 @@ function renderConciliacion(){
 
   var allRows=appGes.map(function(r){return {type:'ag',data:r};})
                     .concat(appOnly.map(function(r){return {type:'ao',data:r};})).concat(gesOnly.map(function(r){return {type:'go',data:r};}));
+  var fTipo=(document.getElementById('conc-f-tipo')||{}).value||'';
   allRows=allRows.filter(function(x){
     var r=x.data;
     if(fCh&&r.chofer!==fCh)return false;
     if(fFec&&r.fecha!==fFec)return false;
+    if(fTipo&&x.type!==fTipo)return false;
     return true;
   });
   allRows.sort(function(a,b){
@@ -630,17 +632,20 @@ function renderConciliacion(){
   }
   document.getElementById('conc-tbody').innerHTML=allRows.length?
     allRows.map(function(x){
-      var r=x.data; var isGO=x.type==='go';
-      var est=isGO?BD('br','Sin App'):(r.resp?BD('bg','Con respuesta'):BD('br','Sin respuesta'));
-      var tipo=isGO?BD('by','Sin gesti\u00f3n'):BD('br','App+Gescom');
+      var r=x.data; var isGO=x.type==='go'; var isAO=x.type==='ao';
+      var tipo=isGO?'<span style="background:#333;color:#aaa;padding:2px 8px;border-radius:4px;font-size:.75rem">GESCOM sin App</span>':isAO?'<span style="background:#1a4731;color:#34d399;padding:2px 8px;border-radius:4px;font-size:.75rem">App sin GESCOM</span>':'<span style="background:#4a1a2a;color:#ff6b8a;padding:2px 8px;border-radius:4px;font-size:.75rem">App+GESCOM</span>';
+      var est=isGO?'-':r.tiene_resp?BD('bg','Con respuesta'):BD('by','Sin respuesta');
+      var fechaApp=r.fecha?fmtFecha(r.fecha):'-';
+      var fechaGes=isAO?'-':(r.fecha_ges?((r.fecha_ges!==r.fecha)?'<span style="color:#f6ad55">'+fmtFecha(r.fecha_ges)+'</span>':fmtFecha(r.fecha_ges)):fmtFecha(r.fecha));
       return '<tr>'+
-        '<td>'+fmtFecha(r.fecha)+'</td>'+
+        '<td>'+fechaApp+'</td>'+
+        '<td>'+fechaGes+'</td>'+
         '<td><strong>'+r.chofer+'</strong></td>'+
         '<td style="font-size:.75rem"><span style="color:#63b3ed;font-weight:700;margin-right:6px">'+(r.cliente||'')+'</span>'+(r.razon||r.clientes||'')+'</td>'+
         '<td>'+tipo+'</td>'+
         '<td>'+est+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+(r.resp||'-')+'</td>'+
-        '<td style="text-align:right;color:#ef4444">$'+F(r.imp)+'</td></tr>';
+        '<td style="text-align:right;color:#ef4444">'+(r.imp?'$'+F(r.imp):'-')+'</td></tr>';
     }).join(''):'<tr><td colspan="7" class="empty">Sin datos</td></tr>';
 
   // Plan de accion

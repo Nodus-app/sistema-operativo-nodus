@@ -241,6 +241,7 @@ tr:hover td{background:#0d1f35}
             <label>Fecha</label>
             <select id="conc-f-fecha" onchange="renderConciliacion()"><option value="">Todas</option></select>
             <label>Ordenar por</label>
+            <select id="conc-f-tipo" onchange="renderConciliacion()" style="background:#1a1e28;border:1px solid #2d3748;color:#e2e8f0;border-radius:7px;padding:6px 10px;font-size:.8rem"><option value="">Todos los tipos</option><option value="ag">App+GESCOM</option><option value="ao">App sin GESCOM</option><option value="go">GESCOM sin App</option></select>
             <select id="conc-f-ord" onchange="renderConciliacion()">
               <option value="fecha">Fecha</option>
               <option value="imp">Importe</option>
