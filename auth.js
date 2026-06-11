@@ -563,7 +563,7 @@ function renderConciliacion(){
 
   // KPIs
   document.getElementById('conc-kpis').innerHTML=
-    KPI(String(k.total_app||0),'Rechazos en App','#a0c8e8')+
+    KPI(String(k.total_app||0),'Rechazos informados en App','#a0c8e8')+
     KPI(String(k.app_ges||0)+' / $'+F(k.imp_app_ges||0),'\ud83d\udd34 App+Gescom (gestion\u00f3 y se perdi\u00f3)','#ff3366')+
     KPI(String(k.app_only||0),'\ud83d\udfe2 App sin Gescom (se salv\u00f3)','#00ff88')+
     KPI(String(k.ges_only||0)+' / $'+F(k.imp_ges_only||0),'\u26ab Gescom sin App (sin gesti\u00f3n)','#2a5a7a')+
@@ -571,40 +571,30 @@ function renderConciliacion(){
     KPI(String(k.sin_resp||0),'Vendedores sin respuesta','#ff9500')+
     KPI((k.pct_saved||0)+'%','% Gestiones salvadas','#00ff88');
 
-  // Ranking choferes (por importe sin gestion)
-  var chRank={};
-  gesOnly.forEach(function(r){
-    if(!chRank[r.chofer])chRank[r.chofer]={ch:r.chofer,n:0,imp:0};
-    chRank[r.chofer].n++; chRank[r.chofer].imp+=r.imp;
-  });
-  var rankCh=Object.values(chRank).sort(function(a,b){return b.n-a.n;});
+  // Ranking choferes: GESCOM sin App (pre-calculado en Python)
+  var rankCh=window.D_CONC?(D_CONC.rank_ch||[]):[];
   document.getElementById('conc-rank-ch').innerHTML=rankCh.length?
     rankCh.map(function(r,i){
       var urg=r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atenci\u00f3n'):BD('bp','Revisar');
-      return '<tr><td>'+(i+1)+'</td><td><strong>'+r.ch+'</strong></td>'+
+      var tipo=r.tipo==='propio'?'Propio':r.tipo==='backup'?'Backup':'Tercero';
+      return '<tr><td>'+(i+1)+'</td><td><strong>'+(r.chofer||r.ch||'')+'</strong></td>'+
+        '<td style="text-align:center;color:#94a3b8;font-size:.78rem">'+tipo+'</td>'+
         '<td style="text-align:right;color:#ef4444">'+r.n+'</td>'+
         '<td style="text-align:right">$'+F(r.imp)+'</td>'+
         '<td>'+urg+'</td></tr>';
-    }).join(''):'<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    }).join(''):'<tr><td colspan="6" class="empty">Sin datos</td></tr>';
 
-  // Ranking vendedores (sin respuesta)
-  var vRank={};
-  appGes.forEach(function(r){
-    var v=r.vendedor||'Sin vendedor';
-    if(!vRank[v])vRank[v]={v:v,total:0,sin_resp:0,imp:0};
-    vRank[v].total++; vRank[v].imp+=r.imp;
-    if(!r.resp)vRank[v].sin_resp++;
-  });
-  var rankV=Object.values(vRank).sort(function(a,b){return b.sin_resp-a.sin_resp;});
+  // Ranking vendedores (pre-calculado en Python)
+  var rankV=window.D_CONC?(D_CONC.rank_vend||[]):[];
   document.getElementById('conc-rank-vend').innerHTML=rankV.length?
     rankV.map(function(r,i){
-      var pctSin=r.total>0?Math.round(r.sin_resp/r.total*100):0;
+      var pctSin=r.pct_sin_resp||0;
       var col=pctSin>70?'#ff3366':pctSin>40?'#ff9500':'#00ff88';
-      return '<tr><td>'+(i+1)+'</td><td><strong>'+r.v+'</strong></td>'+
+      return '<tr><td>'+(i+1)+'</td><td><strong>'+(r.vendedor||r.v||'')+'</strong></td>'+
         '<td style="text-align:right">'+r.total+'</td>'+
+        '<td style="text-align:right;color:#00d4ff">'+(r.con_resp||0)+'</td>'+
         '<td style="text-align:right;color:#ef4444">'+r.sin_resp+'</td>'+
-        '<td><span style="color:'+col+';font-weight:700">'+pctSin+'%</span></td>'+
-        '<td style="text-align:right">$'+F(r.imp)+'</td></tr>';
+        '<td><span style="color:'+col+';font-weight:700">'+pctSin+'%</span></td></tr>';
     }).join(''):'<tr><td colspan="6" class="empty">Sin datos</td></tr>';
 
   // Filter
@@ -613,7 +603,7 @@ function renderConciliacion(){
   var fOrd=(document.getElementById('conc-f-ord')||{}).value||'fecha';
 
   var allRows=appGes.map(function(r){return {type:'ag',data:r};})
-                    .concat(gesOnly.map(function(r){return {type:'go',data:r};}));
+                    .concat(appOnly.map(function(r){return {type:'ao',data:r};})).concat(gesOnly.map(function(r){return {type:'go',data:r};}));
   allRows=allRows.filter(function(x){
     var r=x.data;
     if(fCh&&r.chofer!==fCh)return false;
@@ -643,23 +633,21 @@ function renderConciliacion(){
       var r=x.data; var isGO=x.type==='go';
       var est=isGO?BD('br','Sin App'):(r.resp?BD('bg','Con respuesta'):BD('br','Sin respuesta'));
       var tipo=isGO?BD('by','Sin gesti\u00f3n'):BD('br','App+Gescom');
-      var fechaGes = (x.type==='ag' && r.fecha_ges && r.fecha_ges!==r.fecha) ? '<span style="color:#f6ad55">'+fmtFecha(r.fecha_ges)+'</span>' : (x.type==='ag'?fmtFecha(r.fecha_ges||r.fecha):'-');
       return '<tr>'+
         '<td>'+fmtFecha(r.fecha)+'</td>'+
-        '<td>'+fechaGes+'</td>'+
         '<td><strong>'+r.chofer+'</strong></td>'+
         '<td style="font-size:.75rem"><span style="color:#63b3ed;font-weight:700;margin-right:6px">'+(r.cliente||'')+'</span>'+(r.razon||r.clientes||'')+'</td>'+
         '<td>'+tipo+'</td>'+
         '<td>'+est+'</td>'+
         '<td style="font-size:.75rem;color:#94a3b8">'+(r.resp||'-')+'</td>'+
         '<td style="text-align:right;color:#ef4444">$'+F(r.imp)+'</td></tr>';
-    }).join(''):'<tr><td colspan="8" class="empty">Sin datos</td></tr>';
+    }).join(''):'<tr><td colspan="7" class="empty">Sin datos</td></tr>';
 
   // Plan de accion
   document.getElementById('plan-tbody').innerHTML=rankCh.length?
     rankCh.map(function(r,i){
       var urg=r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atenci\u00f3n'):BD('bp','Revisar');
-      return '<tr><td>'+(i+1)+'</td><td><strong>'+r.ch+'</strong></td>'+
+      return '<tr><td>'+(i+1)+'</td><td><strong>'+(r.chofer||r.ch||'')+'</strong></td>'+
         '<td style="text-align:right;color:#ef4444">'+r.n+'</td>'+
         '<td style="text-align:right">$'+F(r.imp)+'</td>'+
         '<td>'+urg+'</td>'+
@@ -679,9 +667,9 @@ function dlXLS(rows, headers, filename) {
 function dlConciliacion() {
   if (!window.D_CONC) return;
   var rows = D_CONC.app_ges.concat(D_CONC.ges_only).map(function(r) {
-    return [r.fecha, r.fecha_ges||'', r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
+    return [r.fecha, r.chofer, r.cliente||'', r.razon||'', r.motivo||'', r.resp||'', r.estado||'', r.imp||0];
   });
-  dlXLS(rows, ['Fecha App','Fecha Gescom','Chofer','Nro Cliente','Raz\u00f3n Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
+  dlXLS(rows, ['Fecha','Chofer','Nro Cliente','Raz\u00f3n Social','Motivo','Respuesta','Estado','Importe'], 'conciliacion');
 }
 
 function dlCartones() {
