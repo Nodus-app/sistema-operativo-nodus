@@ -982,7 +982,7 @@ function _generarPDFChofer(chofer) {
   // ── EFECTIVIDAD ──
   var efEntregados=0, efNoEnt=0, efPct=0;
   if (window.D_VENTA) {
-    var vch = (D_VENTA.choferes||[]).find(function(c){return c.ch===chofer||c.chofer===chofer;});
+    var vch = Object.values(D_VENTA).find(function(c){return c.ch===chofer||c.chofer===chofer;});
     if (vch) {
       efEntregados = vch.e||0;
       efNoEnt = vch.ne||0;
@@ -994,7 +994,7 @@ function _generarPDFChofer(chofer) {
   // ── RECHAZOS POR PROVEEDOR ──
   var rejProvRows = [];
   if (window.D_VENTA) {
-    var vch2 = (D_VENTA.choferes||[]).find(function(c){return c.ch===chofer||c.chofer===chofer;});
+    var vch2 = Object.values(D_VENTA).find(function(c){return c.ch===chofer||c.chofer===chofer;});
     if (vch2 && vch2.rp) {
       Object.keys(vch2.rp).forEach(function(prov){
         rejProvRows.push({prov:prov, n:vch2.rp[prov].n||0, imp:vch2.rp[prov].imp||0});
@@ -1113,7 +1113,7 @@ function _generarPDFChofer(chofer) {
       :'<p style="font-size:12px;color:#64748b">Sin registros de conciliaci\xf3n</p>')
     +'</div>'
 
-    +'<div class="footer">Sistema Operativo 611 Log\xedstica SA &mdash; Generado: '+new Date().toLocaleString('es-AR')+'</div>'
+    +'<div class="footer">Sistema Operativo 611 Log\xedstica SA &mdash; Generado: '+new Date().toLocaleString('es-AR',{timeZone:'America/Argentina/Cordoba'})+'</div>'
     +'</body></html>';
 
   var w = window.open('', '_blank');
