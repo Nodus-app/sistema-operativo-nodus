@@ -945,8 +945,8 @@ function dlConciliacionPDF() {
 function dlResumenChoferes() {
   var choferes = [];
   // Recolectar todos los choferes de los datos disponibles
-  if (window.D_CART && Array.isArray(D_CART)) {
-    D_CART.forEach(function(r){ if(r.chofer && choferes.indexOf(r.chofer)<0) choferes.push(r.chofer); });
+  if (window.D_CART) {
+    Object.values(D_CART).forEach(function(r){ if(r.chofer && choferes.indexOf(r.chofer)<0) choferes.push(r.chofer); });
   }
   if (!choferes.length && window.D_VENTA) {
     D_VENTA.forEach(function(r){ var ch=r.ch||r.chofer; if(ch && choferes.indexOf(ch)<0) choferes.push(ch); });
@@ -970,8 +970,8 @@ function _generarPDFChofer(chofer) {
 
   // ── CARTONES ──
   var cartSal=0, cartRet=0, cartPct=0;
-  if (window.D_CART && Array.isArray(D_CART)) {
-    var rows = D_CART.filter(function(r){ return r.chofer===chofer; });
+  if (window.D_CART) {
+    var rows = Object.values(D_CART).filter(function(r){ return r.chofer===chofer; });
     if (rows.length) {
       cartSal = rows.reduce(function(s,r){return s+(r.b_sal||0);},0);
       cartRet = rows.reduce(function(s,r){return s+(r.b_ing||0);},0);
