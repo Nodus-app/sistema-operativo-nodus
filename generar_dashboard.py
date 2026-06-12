@@ -870,7 +870,7 @@ html = re.sub(
 # Ruta — botón en fbar
 html = re.sub(
     r'(id="sec-ruta"[^>]*>.*?oninput="filtRuta\(\)"[^>]*>)',
-    lambda m: m.group(1) + BTN('dlRuta'),
+    lambda m: m.group(1) + BTN('dlRuta') if 'dlRuta' not in m.group(1) else m.group(1),
     html, count=1, flags=re.DOTALL
 )
 for old, new in BTNS:

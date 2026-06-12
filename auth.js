@@ -765,10 +765,10 @@ function dlSinRespuesta() {
 }
 
 function dlRuta() {
-  if (!window.D_ROUTE) return;
-  var fCh = (document.getElementById('ruta-f-ch')||{}).value||'';
-  var fFec = (document.getElementById('ruta-f-fec')||{}).value||'';
-  var rows = D_ROUTE.filter(function(r){
+  if (!window.D_ROUTES) return;
+  var fCh  = (document.getElementById('ruta-ch')||{}).value||'';
+  var fFec = (document.getElementById('ruta-fecha')||{}).value||'';
+  var rows = D_ROUTES.filter(function(r){
     if(fCh && r.ch!==fCh) return false;
     if(fFec && r.f!==fFec) return false;
     return true;
@@ -945,10 +945,15 @@ function dlConciliacionPDF() {
 function dlResumenChoferes() {
   var choferes = [];
   // Recolectar todos los choferes de los datos disponibles
-  if (window.D_CART) {
-    (D_CART.semanas||[]).forEach(function(s){
-      (s.choferes||[]).forEach(function(c){ if(choferes.indexOf(c.chofer)<0) choferes.push(c.chofer); });
-    });
+  if (window.D_CART && Array.isArray(D_CART)) {
+    D_CART.forEach(function(r){ if(r.chofer && choferes.indexOf(r.chofer)<0) choferes.push(r.chofer); });
+  }
+  if (!choferes.length && window.D_VENTA) {
+    D_VENTA.forEach(function(r){ var ch=r.ch||r.chofer; if(ch && choferes.indexOf(ch)<0) choferes.push(ch); });
+  }
+  if (!choferes.length && window.D_CONC) {
+    (D_CONC.app_ges||[]).concat(D_CONC.app_only||[]).concat(D_CONC.ges_only||[])
+      .forEach(function(r){ if(r.chofer && choferes.indexOf(r.chofer)<0) choferes.push(r.chofer); });
   }
   if (!choferes.length) { alert('No hay datos de choferes disponibles'); return; }
   choferes.sort();
@@ -965,14 +970,11 @@ function _generarPDFChofer(chofer) {
 
   // ── CARTONES ──
   var cartSal=0, cartRet=0, cartPct=0;
-  if (window.D_CART) {
-    var rows = [];
-    (D_CART.semanas||[]).forEach(function(s){
-      (s.choferes||[]).forEach(function(c){ if(c.chofer===chofer) rows.push(c); });
-    });
+  if (window.D_CART && Array.isArray(D_CART)) {
+    var rows = D_CART.filter(function(r){ return r.chofer===chofer; });
     if (rows.length) {
-      cartSal = rows.reduce(function(s,r){return s+(r.bs||0);},0);
-      cartRet = rows.reduce(function(s,r){return s+(r.bi||0);},0);
+      cartSal = rows.reduce(function(s,r){return s+(r.b_sal||0);},0);
+      cartRet = rows.reduce(function(s,r){return s+(r.b_ing||0);},0);
       cartPct = cartSal>0 ? Math.round(cartRet/cartSal*100) : 0;
     }
   }
