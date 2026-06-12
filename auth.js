@@ -649,6 +649,27 @@ function renderConciliacion(){
     }).join(''):'<tr><td colspan="7" class="empty">Sin datos</td></tr>';
 
   // Plan de accion
+  // Tabla detalle clientes sin respuesta (app_ges sin resp + app_only sin resp)
+  var sinRespRows = appGes.concat(appOnly).filter(function(r){ return !r.tiene_resp; });
+  // Apply same filters
+  if(fCh) sinRespRows = sinRespRows.filter(function(r){ return r.chofer===fCh; });
+  if(fFec) sinRespRows = sinRespRows.filter(function(r){ return r.fecha===fFec; });
+  sinRespRows.sort(function(a,b){ return a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0; });
+  var SR=document.getElementById('conc-sin-resp-tbody');
+  if(SR) SR.innerHTML=sinRespRows.length?
+    sinRespRows.map(function(r,i){
+      var bg=i%2===0?'#1e2535':'#1a1e28';
+      return '<tr style="background:'+bg+'">'
+        +'<td>'+fmtFecha(r.fecha)+'</td>'
+        +'<td><strong>'+r.chofer+'</strong></td>'
+        +'<td style="color:#63b3ed;font-weight:700">'+(r.cliente||'')+'</td>'
+        +'<td style="font-size:.78rem">'+(r.razon||'')+'</td>'
+        +'<td style="font-size:.78rem;color:#f6ad55">'+(r.vendedor||'-')+'</td>'
+        +'<td style="font-size:.78rem">'+(r.motivo||'-')+'</td>'
+        +'<td style="font-size:.75rem;color:#94a3b8">'+(r.estado||'-')+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="7" class="empty">Sin clientes sin respuesta</td></tr>';
+
   document.getElementById('plan-tbody').innerHTML=rankCh.length?
     rankCh.map(function(r,i){
       var urg=r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atenci\u00f3n'):BD('bp','Revisar');
@@ -711,12 +732,35 @@ function dlComisiones() {
   dlXLS(rows, ['Chofer','Reparto','Fecha','Localidades','% Aplicado','Venta Bruta','Devoluciones','Cambios','Neto','Comisi\u00f3n'], 'comisiones');
 }
 
-function dlRuta() {
-  if (!window.D_RUTA) return;
-  var rows = (D_RUTA.repartos||[]).map(function(r) {
-    return [r.reparto||'', r.chofer||'', r.fecha||'', r.localidad||'', r.clientes||0, r.bultos||0];
+function dlSinRespuesta() {
+  if (!window.D_CONC) return;
+  var appGes = D_CONC.app_ges||[];
+  var appOnly = D_CONC.app_only||[];
+  var fCh = (document.getElementById('conc-f-ch')||{}).value||'';
+  var fFec = (document.getElementById('conc-f-fecha')||{}).value||'';
+  var rows = appGes.concat(appOnly).filter(function(r){
+    if(r.tiene_resp) return false;
+    if(fCh && r.chofer!==fCh) return false;
+    if(fFec && r.fecha!==fFec) return false;
+    return true;
+  }).map(function(r){
+    return [r.fecha||'', r.chofer||'', r.cliente||'', r.razon||'', r.vendedor||'', r.motivo||'', r.estado||''];
   });
-  dlXLS(rows, ['Reparto','Chofer','Fecha','Localidad','Clientes','Bultos'], 'hoja_de_ruta');
+  dlXLS(rows, ['Fecha','Chofer','Cliente','Razón Social','Vendedor','Motivo','Estado'], 'clientes_sin_respuesta');
+}
+
+function dlRuta() {
+  if (!window.D_ROUTE) return;
+  var fCh = (document.getElementById('ruta-f-ch')||{}).value||'';
+  var fFec = (document.getElementById('ruta-f-fec')||{}).value||'';
+  var rows = D_ROUTE.filter(function(r){
+    if(fCh && r.ch!==fCh) return false;
+    if(fFec && r.f!==fFec) return false;
+    return true;
+  }).map(function(r) {
+    return [r.rep||'', r.ch||'', r.f||'', r.n||0, r.tot||0, r.rej||0, r.kg||0, r.pep||0, r.mol||0];
+  });
+  dlXLS(rows, ['Reparto','Chofer','Fecha','Clientes','Total $','Rechazos','KG','Pepsico $','Molinos $'], 'hoja_de_ruta');
 }
 
 // \u2500\u2500 DESCARGA EXCEL \u2014 RECHAZOS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500

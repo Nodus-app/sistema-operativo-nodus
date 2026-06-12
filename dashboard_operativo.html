@@ -115,6 +115,7 @@ tr:hover td{background:#0d1f35}
     <div style="display:flex;align-items:baseline;gap:8px">
       <span class="hdr-title">&#x1F4E6; 611 Log&#237;stica &mdash; Dashboard Operativo</span>
       <span class="hdr-sub" id="hdr-periodo" style="font-size:.72rem;color:#64748b"></span>
+      <span style="font-size:.68rem;color:#475569;margin-left:8px">&#128197; Actualizado: __BUILD_DT__</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;font-size:.78rem">
       <label style="color:#64748b">Choferes:</label>
@@ -231,6 +232,13 @@ tr:hover td{background:#0d1f35}
             <div class="tw"><table>
               <thead><tr><th>#</th><th>Vendedor</th><th>Total</th><th>Con resp.</th><th>Sin resp.</th><th>%</th></tr></thead>
               <tbody id="conc-rank-vend"></tbody>
+            </table></div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <h3>&#128204; Detalle Clientes sin Respuesta <button onclick="dlSinRespuesta()" style="background:#1a4731;color:#34d399;border:1px solid #34d399;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
+            <div class="tw"><table>
+              <thead><tr><th>Fecha</th><th>Chofer</th><th>Cliente</th><th>Raz&#243;n Social</th><th>Vendedor</th><th>Motivo</th><th>Estado</th></tr></thead>
+              <tbody id="conc-sin-resp-tbody"></tbody>
             </table></div>
           </div>
         </div>

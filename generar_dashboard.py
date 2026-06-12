@@ -881,7 +881,9 @@ btn_count = html.count('dlRej') + html.count('dlCart') + html.count('dlConc') + 
 print(f"  Botones Excel inyectados: {btn_count} referencias")
 
 build_ts = str(int(datetime.now().timestamp()))
+build_dt = datetime.now().strftime('%d/%m/%Y %H:%M')
 html = html.replace('__BUILD_TS__', build_ts)
+html = html.replace('__BUILD_DT__', build_dt)
 
 with open(dash_path,'w',encoding='utf-8') as f: f.write(html)
 print(f"\nDashboard: {os.path.getsize(dash_path)//1024}KB")
