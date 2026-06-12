@@ -940,3 +940,183 @@ function dlConciliacionPDF() {
   w.document.close();
   setTimeout(function(){ w.print(); }, 500);
 }
+
+// ── DESCARGAR RESUMEN POR CHOFER (un PDF por chofer) ─────────────────────────
+function dlResumenChoferes() {
+  var choferes = [];
+  // Recolectar todos los choferes de los datos disponibles
+  if (window.D_CART) {
+    (D_CART.semanas||[]).forEach(function(s){
+      (s.choferes||[]).forEach(function(c){ if(choferes.indexOf(c.chofer)<0) choferes.push(c.chofer); });
+    });
+  }
+  if (!choferes.length) { alert('No hay datos de choferes disponibles'); return; }
+  choferes.sort();
+  var confirm_msg = 'Se van a generar ' + choferes.length + ' PDFs (uno por chofer).\n\nEl navegador puede pedir permiso para abrir múltiples ventanas.\n\n¿Continuar?';
+  if (!window.confirm(confirm_msg)) return;
+  choferes.forEach(function(ch, i) {
+    setTimeout(function(){ _generarPDFChofer(ch); }, i * 800);
+  });
+}
+
+function _generarPDFChofer(chofer) {
+  var periodo = (window.D_CONC && D_CONC.periodo) || (window.D_COM && D_COM.periodo) || '';
+  var tipo = (window.CHOFER_TIPOS && CHOFER_TIPOS[chofer]) || '';
+
+  // ── CARTONES ──
+  var cartSal=0, cartRet=0, cartPct=0;
+  if (window.D_CART) {
+    var rows = [];
+    (D_CART.semanas||[]).forEach(function(s){
+      (s.choferes||[]).forEach(function(c){ if(c.chofer===chofer) rows.push(c); });
+    });
+    if (rows.length) {
+      cartSal = rows.reduce(function(s,r){return s+(r.bs||0);},0);
+      cartRet = rows.reduce(function(s,r){return s+(r.bi||0);},0);
+      cartPct = cartSal>0 ? Math.round(cartRet/cartSal*100) : 0;
+    }
+  }
+
+  // ── EFECTIVIDAD ──
+  var efEntregados=0, efNoEnt=0, efPct=0;
+  if (window.D_VENTA) {
+    var vch = (D_VENTA.choferes||[]).find(function(c){return c.ch===chofer||c.chofer===chofer;});
+    if (vch) {
+      efEntregados = vch.e||0;
+      efNoEnt = vch.ne||0;
+      var tot = efEntregados + efNoEnt;
+      efPct = tot>0 ? Math.round(efEntregados/tot*100) : 0;
+    }
+  }
+
+  // ── RECHAZOS POR PROVEEDOR ──
+  var rejProvRows = [];
+  if (window.D_VENTA) {
+    var vch2 = (D_VENTA.choferes||[]).find(function(c){return c.ch===chofer||c.chofer===chofer;});
+    if (vch2 && vch2.rp) {
+      Object.keys(vch2.rp).forEach(function(prov){
+        rejProvRows.push({prov:prov, n:vch2.rp[prov].n||0, imp:vch2.rp[prov].imp||0});
+      });
+      // Pepsico first, then sort by imp
+      rejProvRows.sort(function(a,b){
+        if(a.prov.indexOf('Pepsico')>=0||a.prov.indexOf('PEPSICO')>=0) return -1;
+        if(b.prov.indexOf('Pepsico')>=0||b.prov.indexOf('PEPSICO')>=0) return 1;
+        return b.imp - a.imp;
+      });
+    }
+  }
+
+  // ── CONCILIACION ──
+  var concAG=[], concAO=[], concGO=[];
+  if (window.D_CONC) {
+    concAG = (D_CONC.app_ges||[]).filter(function(r){return r.chofer===chofer;});
+    concAO = (D_CONC.app_only||[]).filter(function(r){return r.chofer===chofer;});
+    concGO = (D_CONC.ges_only||[]).filter(function(r){return r.chofer===chofer;});
+  }
+  var concTotal = concAG.length + concAO.length + concGO.length;
+  var pctSalv = (concAG.length+concAO.length)>0 ? Math.round(concAO.length/(concAG.length+concAO.length)*100) : 0;
+  var sinResp = concAG.concat(concAO).filter(function(r){return !r.tiene_resp;}).length;
+
+  var allConc = concAG.map(function(r){return {type:'ag',r:r};})
+    .concat(concAO.map(function(r){return {type:'ao',r:r};}))
+    .concat(concGO.map(function(r){return {type:'go',r:r};}));
+  allConc.sort(function(a,b){return a.r.fecha<b.r.fecha?-1:1;});
+
+  var KPI = function(val, lbl, col) {
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px">'
+      +'<div style="font-size:20px;font-weight:700;color:'+(col||'#0f172a')+'">'+val+'</div>'
+      +'<div style="font-size:11px;color:#64748b;margin-top:2px">'+lbl+'</div></div>';
+  };
+
+  var rejRows = rejProvRows.map(function(r){
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      +'<td style="padding:5px 8px;font-size:11px;font-weight:600">'+(r.prov.indexOf('Pepsico')>=0||r.prov.indexOf('PEPSICO')>=0?'<span style="color:#1d4ed8">★ </span>':'')+r.prov+'</td>'
+      +'<td style="padding:5px 8px;font-size:11px;text-align:center">'+r.n+'</td>'
+      +'<td style="padding:5px 8px;font-size:11px;text-align:right;color:#dc2626">$'+Math.round(r.imp).toLocaleString('es-AR')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var typeCol = function(t){return t==='go'?'#888':t==='ao'?'#16a34a':'#dc2626';};
+  var typeLbl = function(t){return t==='go'?'GESCOM sin App':t==='ao'?'App sin GESCOM':'App+GESCOM';};
+
+  var concRows = allConc.map(function(x){
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      +'<td style="padding:4px 6px;font-size:10px">'+x.r.fecha+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px;color:#1d4ed8;font-weight:600">'+(x.r.cliente||'')+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px">'+(x.r.razon||'')+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px;color:'+typeCol(x.type)+'">'+typeLbl(x.type)+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px;color:#64748b">'+(x.r.vendedor||'-')+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px">'+(x.r.resp||'-')+'</td>'
+      +'<td style="padding:4px 6px;font-size:10px;text-align:right">'+(x.r.imp?'$'+Math.round(x.r.imp).toLocaleString('es-AR'):'')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Resumen '+chofer+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;margin:0;padding:0;color:#0f172a}'
+    +'.hdr{background:#0f172a;color:white;padding:24px 28px}'
+    +'.hdr h1{margin:0;font-size:20px;font-weight:700;color:#00e5cc}'
+    +'.hdr .sub{font-size:12px;color:#94a3b8;margin-top:4px}'
+    +'.sec{margin:16px 24px}'
+    +'.sec h2{font-size:13px;font-weight:700;color:#0f172a;border-bottom:2px solid #00e5cc;padding-bottom:5px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}'
+    +'.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}'
+    +'table{width:100%;border-collapse:collapse}'
+    +'thead{background:#0f172a;color:white}'
+    +'thead th{padding:6px 8px;text-align:left;font-size:11px;font-weight:600}'
+    +'tbody tr:nth-child(even){background:#f8fafc}'
+    +'.footer{text-align:center;font-size:10px;color:#94a3b8;margin:20px;padding-top:10px;border-top:1px solid #e2e8f0}'
+    +'@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    +'</style></head><body>'
+    +'<div class="hdr">'
+    +'<h1>'+chofer+'</h1>'
+    +'<div class="sub">Resumen Operativo &nbsp;|&nbsp; Per\xedodo: '+periodo+(tipo?' &nbsp;|&nbsp; '+tipo.charAt(0).toUpperCase()+tipo.slice(1):'')+'</div>'
+    +'</div>'
+
+    +'<div class="sec"><h2>&#x1F4E6; Retorno de Cartones</h2>'
+    +'<div class="kgrid">'
+    +KPI(cartSal,'B.E. Salida')
+    +KPI(cartRet,'B.E. Retorno')
+    +KPI(cartPct+'%','% Retorno', cartPct>=90?'#16a34a':cartPct>=70?'#d97706':'#dc2626')
+    +'</div></div>'
+
+    +'<div class="sec"><h2>&#x1F4CA; Efectividad de Entrega</h2>'
+    +'<div class="kgrid">'
+    +KPI(efEntregados,'Pedidos Entregados','#16a34a')
+    +KPI(efNoEnt,'No Entregados','#dc2626')
+    +KPI(efPct+'%','% Efectividad', efPct>=95?'#16a34a':efPct>=85?'#d97706':'#dc2626')
+    +'</div></div>'
+
+    +'<div class="sec"><h2>&#x26A0; Rechazos por Proveedor</h2>'
+    +(rejProvRows.length?
+      '<table><thead><tr><th>Proveedor</th><th style="text-align:center">Cantidad</th><th style="text-align:right">Importe $</th></tr></thead>'
+      +'<tbody>'+rejRows+'</tbody></table>'
+      :'<p style="font-size:12px;color:#64748b">Sin rechazos registrados</p>')
+    +'</div>'
+
+    +'<div class="sec"><h2>&#x1F4F1; Conciliaci\xf3n App vs GESCOM</h2>'
+    +'<div class="kgrid" style="grid-template-columns:repeat(4,1fr)">'
+    +KPI(concAG.length+concAO.length,'Rechazos en App','#1d4ed8')
+    +KPI(concAG.length,'App+GESCOM (perd\xedos)','#dc2626')
+    +KPI(concAO.length,'App sin GESCOM (salvados)','#16a34a')
+    +KPI(concGO.length,'GESCOM sin App','#64748b')
+    +'</div>'
+    +'<div class="kgrid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'
+    +KPI(pctSalv+'%','% Gestiones salvadas', pctSalv>=60?'#16a34a':pctSalv>=40?'#d97706':'#dc2626')
+    +KPI(sinResp,'Sin respuesta vendedor','#d97706')
+    +KPI(concTotal,'Total registros')
+    +'</div>'
+    +(allConc.length?
+      '<table style="margin-top:12px"><thead><tr>'
+      +'<th>Fecha</th><th>Cliente</th><th>Raz\xf3n Social</th><th>Tipo</th><th>Vendedor</th><th>Respuesta</th><th style="text-align:right">Importe</th>'
+      +'</tr></thead><tbody>'+concRows+'</tbody></table>'
+      :'<p style="font-size:12px;color:#64748b">Sin registros de conciliaci\xf3n</p>')
+    +'</div>'
+
+    +'<div class="footer">Sistema Operativo 611 Log\xedstica SA &mdash; Generado: '+new Date().toLocaleString('es-AR')+'</div>'
+    +'</body></html>';
+
+  var w = window.open('', '_blank');
+  if (!w) { alert('El navegador bloqueó las ventanas emergentes. Por favor permitilas para este sitio.'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 600);
+}

@@ -880,12 +880,15 @@ for old, new in BTNS:
 btn_count = html.count('dlRej') + html.count('dlCart') + html.count('dlConc') + html.count('dlDep') + html.count('dlVent') + html.count('dlCom') + html.count('dlRuta')
 print(f"  Botones Excel inyectados: {btn_count} referencias")
 
-build_ts = str(int(datetime.now().timestamp()))
-build_dt = datetime.now().strftime('%d/%m/%Y %H:%M')
+from datetime import timezone, timedelta as _tdtz
+_tz_ar = timezone(timedelta(hours=-3))
+_now_ar = datetime.now(_tz_ar)
+build_ts = str(int(_now_ar.timestamp()))
+build_dt = _now_ar.strftime('%d/%m/%Y %H:%M')
 html = html.replace('__BUILD_TS__', build_ts)
 html = html.replace('__BUILD_DT__', build_dt)
 
 with open(dash_path,'w',encoding='utf-8') as f: f.write(html)
 print(f"\nDashboard: {os.path.getsize(dash_path)//1024}KB")
-print(f"Completado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+print(f"Completado: {_now_ar.strftime('%d/%m/%Y %H:%M')} (hora Argentina)")
 print("=" * 60)

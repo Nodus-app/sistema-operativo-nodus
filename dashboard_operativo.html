@@ -113,9 +113,10 @@ tr:hover td{background:#0a1515}
 <div id="app">
   <div class="hdr">
     <div style="display:flex;align-items:baseline;gap:8px">
-      <span class="hdr-title">&#x1F4E6; 611 Log&#0d1a1a;stica &mdash; Dashboard Operativo</span>
+      <span class="hdr-title">&#x1F4E6; 611 LogÃ­stica &mdash; Dashboard Operativo</span>
       <span class="hdr-sub" id="hdr-periodo" style="font-size:.72rem;color:#546e6e"></span>
-      <span style="font-size:.68rem;color:#4db6ac;margin-left:8px">&#128197; Actualizado: 12/06/2026 17:30</span>
+      <span style="font-size:.68rem;color:#4db6ac;margin-left:8px">&#128197; Actualizado: __BUILD_DT__</span>
+      <button onclick="dlResumenChoferes()" style="background:#00695c30;border:1px solid #00e5cc;color:#00e5cc;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;margin-left:6px">&#128196; Descargar Resumen</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;font-size:.78rem">
       <label style="color:#546e6e">Choferes:</label>
@@ -135,15 +136,15 @@ tr:hover td{background:#0a1515}
 
   <!-- CARTONES -->
   <div class="sec on" id="sec-cartones">
-    <div class="note ny" id="cart-note">Cartones del per&#0d1a1a;odo</div>
+    <div class="note ny" id="cart-note">Cartones del per&#11015;odo</div>
     <div class="sr" id="cart-kpis"></div>
-    <div class="card"><h3>Retorno por Chofer <button onclick="dlCartones()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+    <div class="card"><h3>Retorno por Chofer <button onclick="dlCartones()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
       <div class="fbar">
         <label>Vista</label>
         <select id="cart-vista" onchange="renderCart()">
           <option value="mes">Mes acum.</option>
           <option value="sem">Por semana</option>
-          <option value="dia">Por d&#0d1a1a;a</option>
+          <option value="dia">Por d&#11015;a</option>
         </select>
         <label>Semana</label>
         <select id="cart-sem" onchange="renderCart()"><option value="">Todas</option></select>
@@ -174,7 +175,7 @@ tr:hover td{background:#0a1515}
       <button class="rtab"    onclick="rejTab('conc',this)">&#128241; App &amp; Conciliación</button>
     </div>
     <div id="rp-prov" class="rp on">
-      <div class="card"><h3>Rechazo por Proveedor <button onclick="dlRejProv()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+      <div class="card"><h3>Rechazo por Proveedor <button onclick="dlRejProv()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
           <thead><tr><th>Proveedor</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rechazo</th><th>Cambio ($)</th><th>% Cambio</th><th>Fac.</th><th>No Ent.</th><th>Efectividad</th></tr></thead>
           <tbody id="rej-prov-tb"></tbody>
@@ -182,7 +183,7 @@ tr:hover td{background:#0a1515}
       </div>
     </div>
     <div id="rp-motivo" data-dl="motivo" data-dl="motivo" data-dl="motivo" data-dl="motivo" data-dl="motivo" class="rp" style="display:none">
-      <div class="card"><h3>Por Motivo <button onclick="dlRejMotivo()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+      <div class="card"><h3>Por Motivo <button onclick="dlRejMotivo()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
           <thead><tr><th>Motivo</th><th>Importe ($)</th><th>Unidades</th><th>% del total</th></tr></thead>
           <tbody id="rej-mot-tb"></tbody>
@@ -190,23 +191,23 @@ tr:hover td{background:#0a1515}
       </div>
     </div>
     <div id="rp-chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" class="rp" style="display:none">
-      <div class="card"><h3>Por Chofer <button onclick="dlRejChofer()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+      <div class="card"><h3>Por Chofer <button onclick="dlRejChofer()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
           <div class="fbar" style="margin-bottom:8px">
         <label>Vista</label>
         <select id="rej-vista-ch" onchange="renderRejAll()">
           <option value="mes">Mes acum.</option>
           <option value="sem">Por semana</option>
-          <option value="dia">Por d&#0d1a1a;a</option>
+          <option value="dia">Por d&#11015;a</option>
         </select>
       </div>
-      <thead><tr><th>Chofer / Per&#0d1a1a;odo</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rechazo ($)</th><th>Efectividad</th></tr></thead>
+      <thead><tr><th>Chofer / Per&#11015;odo</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rechazo ($)</th><th>Efectividad</th></tr></thead>
           <tbody id="rej-ch-tb"></tbody>
         </table></div>
       </div>
     </div>
     <div id="rp-reinc" class="rp" style="display:none">
-      <div class="card"><h3>Clientes Reincidentes <button onclick="dlRejReinc()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+      <div class="card"><h3>Clientes Reincidentes <button onclick="dlRejReinc()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
           <thead><tr><th>#</th><th>Cliente</th><th>Localidad</th><th>Rechazos</th><th>Importe ($)</th><th>Proveedores</th><th>Vendedor</th><th>Choferes</th><th>Fechas</th></tr></thead>
           <tbody id="rej-reinc-tb"></tbody>
@@ -254,7 +255,7 @@ tr:hover td{background:#0a1515}
           </div>
           <div style="margin-left:auto;position:relative">
             <button onclick="toggleDescarga()" style="background:linear-gradient(135deg,#00968833,#00e5cc22);border:1px solid #00e5cc;color:#00e5cc;border-radius:8px;padding:7px 16px;font-size:.82rem;cursor:pointer;font-weight:600">
-              &#0d1a1a; Descargar &#9660;
+              &#11015; Descargar &#9660;
             </button>
             <div id="conc-dl-menu" style="display:none;position:absolute;right:0;top:36px;background:#0a1515;border:1px solid #00b39440;border-radius:8px;min-width:140px;z-index:100;overflow:hidden">
               <div onclick="dlConciliacion();toggleDescarga()" style="padding:10px 16px;cursor:pointer;color:#00e5cc;font-size:.82rem;border-bottom:1px solid #00b39440" onmouseover="this.style.background='#00b39440'" onmouseout="this.style.background=''">&#128196; Excel</div>
@@ -301,7 +302,7 @@ tr:hover td{background:#0a1515}
 
   <!-- DEPOSITO -->
   <div class="sec" id="sec-deposito">
-    <div class="note ny" id="dep-note">Diferencias de Inventario <button onclick="dlDeposito()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></div>
+    <div class="note ny" id="dep-note">Diferencias de Inventario <button onclick="dlDeposito()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></div>
     <div class="fbar">
       <label>Proveedor</label>
       <select id="dep-prov-f" onchange="renderDep()"><option value="">Todos</option></select>
@@ -340,7 +341,7 @@ tr:hover td{background:#0a1515}
       </table></div>
     </div>
     <div class="card"><h3>&#9878; Compensaciones detectadas</h3>
-      <p style="font-size:.78rem;color:#546e6e;margin-bottom:10px">Productos similares con movimientos opuestos que se compensan entre s&#0d1a1a;</p>
+      <p style="font-size:.78rem;color:#546e6e;margin-bottom:10px">Productos similares con movimientos opuestos que se compensan entre s&#11015;</p>
       <div class="tw"><table>
         <thead><tr><th>Faltante</th><th>Uds / Importe</th><th>Sobrante</th><th>Uds / Importe</th><th>Neto</th></tr></thead>
         <tbody id="dep-comp-tb"></tbody>
@@ -356,7 +357,7 @@ tr:hover td{background:#0a1515}
       <select id="ven-vista" onchange="renderVentas()">
         <option value="mes">Mes acum.</option>
         <option value="sem">Por semana</option>
-        <option value="dia">Por d&#0d1a1a;a</option>
+        <option value="dia">Por d&#11015;a</option>
       </select>
       <label>Proveedor</label>
       <select id="ven-prov" onchange="renderVentas()"><option value="">Todos</option></select>
@@ -370,9 +371,9 @@ tr:hover td{background:#0a1515}
           <tbody id="ven-prov-tb"></tbody>
         </table></div>
       </div>
-      <div class="card"><h3>Por Chofer <button onclick="dlRejChofer()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button></h3>
+      <div class="card"><h3>Por Chofer <button onclick="dlRejChofer()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
-          <thead><tr><th>Chofer / Per&#0d1a1a;odo</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rec.</th><th>Efectividad</th></tr></thead>
+          <thead><tr><th>Chofer / Per&#11015;odo</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rec.</th><th>Efectividad</th></tr></thead>
           <tbody id="ven-ch-tb"></tbody>
         </table></div>
       </div>
@@ -388,7 +389,7 @@ tr:hover td{background:#0a1515}
       <select id="ruta-ch" onchange="filtRuta()"><option value="">Todos</option></select>
       <label>Camión</label>
       <select id="ruta-cam" onchange="filtRuta()"><option value="">Todos</option></select>
-      <input id="ruta-q" placeholder="Buscar cliente o dirección..." oninput="filtRuta()"><button onclick="dlRuta()" style="background:#1a4731;color:#34d399;border:1px solid #34d399;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#0d1a1a; Excel</button>
+      <input id="ruta-q" placeholder="Buscar cliente o dirección..." oninput="filtRuta()"><button onclick="dlRuta()" style="background:#1a4731;color:#34d399;border:1px solid #34d399;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button><button onclick="dlRuta()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button>
     </div>
     <div class="ruta-layout">
       <div class="rsl" id="rsl"></div>
