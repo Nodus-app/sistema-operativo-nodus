@@ -881,7 +881,7 @@ btn_count = html.count('dlRej') + html.count('dlCart') + html.count('dlConc') + 
 print(f"  Botones Excel inyectados: {btn_count} referencias")
 
 from datetime import timezone, timedelta as _tdtz
-_tz_ar = timezone(timedelta(hours=-3))
+_tz_ar = timezone(_tdtz(hours=-3))
 _now_ar = datetime.now(_tz_ar)
 build_ts = str(int(_now_ar.timestamp()))
 build_dt = _now_ar.strftime('%d/%m/%Y %H:%M')
