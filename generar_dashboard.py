@@ -341,9 +341,12 @@ for ch, df_ch in vc.groupby('chofer'):
     rp=dev_ch.groupby('proveedor').agg(n=('importe_neto','count'),imp=('importe_neto','sum')).reset_index()
     cam_ch=df_ch[df_ch['tipo_venta']=='Cambio']
     ip=cam_ch.groupby('proveedor').agg(n=('importe_neto','count'),imp=('importe_neto','sum')).reset_index()
+    ven_ch=df_ch[df_ch['tipo_venta']=='Venta']
+    vp=ven_ch.groupby('proveedor').agg(imp=('Importe','sum')).reset_index()
     venta_list.append({'ch':str(ch),'e':e,'ne':ne,
         'rp':{r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)} for _,r in rp.iterrows()},
-        'ip':{r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)} for _,r in ip.iterrows()}})
+        'ip':{r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)} for _,r in ip.iterrows()},
+        'vp':{r['proveedor']:round(float(r['imp']),0) for _,r in vp.iterrows()}})
 
 # ── REINCIDENTES ──────────────────────────────────────────────────────────────
 comp_cls2 = vc.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
