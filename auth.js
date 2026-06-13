@@ -979,22 +979,28 @@ function _generarPDFChofer(chofer) {
     }
   }
 
-  // ── EFECTIVIDAD PEPSICO ──
-  var efPepVenta=0, efPepRec=0, efPepPct=0;
+  // ── PEPSICO DATA ──
+  var pepVenta=0, pepRej=0, pepRejPct='0.0', pepCam=0, pepCamPct='0.0';
+  var pepFac=0, pepNoEnt=0, pepEfect='0.0';
+  var efPepVenta=0, efPepRec=0, efPepPct='0.0';
   if (window.D_VENTA) {
     var vch = Object.values(D_VENTA).find(function(c){return c.ch===chofer||c.chofer===chofer;});
     if (vch) {
-      // Pepsico: venta total del proveedor y rechazo
-      var pepKey = Object.keys(vch.rp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      if (pepKey) {
-        efPepRec  = (vch.rp[pepKey].imp||0);
-      }
-      // Venta Pepsico desde D_PROV
+      var pepKey  = Object.keys(vch.rp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
+      var pepKeyC = Object.keys(vch.ip||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
+      var pepKeyV = Object.keys(vch.vp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
+      // Get venta Pepsico from D_PROV filtered by chofer, or from vch
       if (window.D_PROV) {
-        var pepProv = (Array.isArray(D_PROV)?D_PROV:Object.values(D_PROV)).find(function(p){return p.prov&&(p.prov.indexOf('Pepsico')>=0||p.prov.indexOf('PEPSICO')>=0);});
-        if (pepProv) efPepVenta = pepProv.venta||0;
+        var allProv = Array.isArray(D_PROV)?D_PROV:Object.values(D_PROV);
+        var pepRow = allProv.find(function(p){return p.prov&&(p.prov.indexOf('Pepsico')>=0||p.prov.indexOf('PEPSICO')>=0);});
+        if (pepRow) { pepVenta = pepRow.venta||0; pepFac = pepRow.fac||0; pepNoEnt = pepRow.no_e||0; }
+        if (pepVenta>0 && pepFac+pepNoEnt>0) pepEfect = ((pepFac/(pepFac+pepNoEnt))*100).toFixed(1);
       }
-      efPepPct = efPepVenta>0 ? (efPepRec/efPepVenta*100).toFixed(1) : '0.0';
+      if (pepKey)  { pepRej = vch.rp[pepKey].imp||0; }
+      if (pepKeyC) { pepCam = vch.ip[pepKeyC].imp||0; }
+      pepRejPct = pepVenta>0 ? (pepRej/pepVenta*100).toFixed(1) : '0.0';
+      pepCamPct = pepVenta>0 ? (pepCam/pepVenta*100).toFixed(1) : '0.0';
+      efPepVenta = pepVenta; efPepRec = pepRej; efPepPct = pepRejPct;
     }
   }
 
@@ -1043,13 +1049,7 @@ function _generarPDFChofer(chofer) {
       +'<div style="font-size:11px;color:#64748b;margin-top:2px">'+lbl+'</div></div>';
   };
 
-  var rejRows = rejProvRows.map(function(r){
-    return '<tr style="border-bottom:1px solid #e5e7eb">'
-      +'<td style="padding:5px 8px;font-size:11px;font-weight:600">'+(r.prov.indexOf('Pepsico')>=0||r.prov.indexOf('PEPSICO')>=0?'<span style="color:#1d4ed8">★ </span>':'')+r.prov+'</td>'
-      +'<td style="padding:5px 8px;font-size:11px;text-align:center">'+r.n+'</td>'
-      +'<td style="padding:5px 8px;font-size:11px;text-align:right;color:#dc2626">$'+Math.round(r.imp).toLocaleString('es-AR')+'</td>'
-      +'</tr>';
-  }).join('');
+  // rejRows removed - now using Pepsico-only metrics
 
   var typeCol = function(t){return t==='go'?'#888':t==='ao'?'#16a34a':'#dc2626';};
   var typeLbl = function(t){return t==='go'?'GESCOM sin App':t==='ao'?'App sin GESCOM':'App+GESCOM';};
@@ -1093,20 +1093,21 @@ function _generarPDFChofer(chofer) {
     +KPI(cartPct+'%','% Retorno', cartPct>=90?'#16a34a':cartPct>=70?'#d97706':'#dc2626')
     +'</div></div>'
 
-    +'<div class="sec"><h2>&#x1F4CA; Efectividad de Entrega &#x2014; Pepsico</h2>'
-    +'<div class="kgrid">'
-    +KPI('$'+Math.round(efPepVenta).toLocaleString('es-AR'),'Venta Pepsico','#1d4ed8')
-    +KPI('$'+Math.round(efPepRec).toLocaleString('es-AR'),'Rechazo Pepsico','#dc2626')
-    +KPI(efPepPct+'%','% Rechazo Pepsico', parseFloat(efPepPct)<=2?'#16a34a':parseFloat(efPepPct)<=5?'#d97706':'#dc2626')
+    +'<div class="sec"><h2>&#x1F4CA; Pepsico &#x2014; Efectividad y Rechazos</h2>'
+    +'<div class="kgrid" style="grid-template-columns:repeat(4,1fr)">'
+    +KPI('$'+Math.round(pepVenta).toLocaleString('es-AR'),'Venta Pepsico','#1d4ed8')
+    +KPI(String(pepFac),'Facturados','#16a34a')
+    +KPI(String(pepNoEnt),'No Entregados','#dc2626')
+    +KPI(pepEfect+'%','Efectividad', parseFloat(pepEfect)>=98?'#16a34a':parseFloat(pepEfect)>=95?'#d97706':'#dc2626')
+    +'</div>'
+    +'<div class="kgrid" style="grid-template-columns:repeat(4,1fr);margin-top:10px">'
+    +KPI('$'+Math.round(pepRej).toLocaleString('es-AR'),'Rechazo $','#dc2626')
+    +KPI(pepRejPct+'%','% Rechazo', parseFloat(pepRejPct)<=2?'#16a34a':parseFloat(pepRejPct)<=5?'#d97706':'#dc2626')
+    +KPI('$'+Math.round(pepCam).toLocaleString('es-AR'),'Cambio $','#d97706')
+    +KPI(pepCamPct+'%','% Cambio', parseFloat(pepCamPct)<=2?'#16a34a':parseFloat(pepCamPct)<=5?'#d97706':'#dc2626')
     +'</div></div>'
 
-    +'<div class="sec"><h2>&#x26A0; Rechazos y Cambios &#x2014; Pepsico</h2>'
-    +'<div class="kgrid" style="grid-template-columns:repeat(4,1fr)">'
-    +KPI('$'+Math.round(pepRejImp).toLocaleString('es-AR'),'Rechazo $','#dc2626')
-    +KPI(pepRejPct+'%','% Rechazo Pepsico', parseFloat(pepRejPct)<=2?'#16a34a':parseFloat(pepRejPct)<=5?'#d97706':'#dc2626')
-    +KPI('$'+Math.round(pepCamImp).toLocaleString('es-AR'),'Cambio $','#d97706')
-    +KPI(pepCamPct+'%','% Cambio Pepsico', parseFloat(pepCamPct)<=2?'#16a34a':parseFloat(pepCamPct)<=5?'#d97706':'#dc2626')
-    +'</div></div>'
+    // rechazos pepsico now merged into efectividad section above
 
     +'<div class="sec"><h2>&#x1F4F1; Conciliaci\xf3n App vs GESCOM</h2>'
     +'<div class="kgrid" style="grid-template-columns:repeat(4,1fr)">'
