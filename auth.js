@@ -986,18 +986,16 @@ function _generarPDFChofer(chofer) {
   if (window.D_VENTA) {
     var vch = Object.values(D_VENTA).find(function(c){return c.ch===chofer||c.chofer===chofer;});
     if (vch) {
-      var pepKey  = Object.keys(vch.rp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      var pepKeyC = Object.keys(vch.ip||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      var pepKeyV = Object.keys(vch.vp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      // Venta Pepsico del chofer desde vp (venta por proveedor del chofer)
-      if (pepKeyV) pepVenta = vch.vp[pepKeyV]||0;
-      if (pepKey)  { pepRej = vch.rp[pepKey].imp||0; }
-      if (pepKeyC) { pepCam = vch.ip[pepKeyC].imp||0; }
-      // Facturados y no entregados de Pepsico: usar e y ne del chofer como proxy
-      pepFac = vch.e||0; pepNoEnt = vch.ne||0;
-      if (pepFac+pepNoEnt>0) pepEfect = ((pepFac/(pepFac+pepNoEnt))*100).toFixed(1);
-      pepRejPct = pepVenta>0 ? (pepRej/pepVenta*100).toFixed(1) : '0.0';
-      pepCamPct = pepVenta>0 ? (pepCam/pepVenta*100).toFixed(1) : '0.0';
+      // Datos Pepsico pre-calculados por chofer
+      var pep = vch.pep || {};
+      pepVenta = pep.vta||0;
+      pepRej   = pep.dev||0;
+      pepCam   = pep.cam||0;
+      pepFac   = pep.e||0;
+      pepNoEnt = pep.ne||0;
+      pepEfect = String((pep.efect||0).toFixed(1));
+      pepRejPct= String((pep.pct_dev||0).toFixed(1));
+      pepCamPct= String((pep.pct_cam||0).toFixed(1));
       efPepVenta = pepVenta; efPepRec = pepRej; efPepPct = pepRejPct;
     }
   }

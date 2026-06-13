@@ -343,10 +343,24 @@ for ch, df_ch in vc.groupby('chofer'):
     ip=cam_ch.groupby('proveedor').agg(n=('importe_neto','count'),imp=('importe_neto','sum')).reset_index()
     ven_ch=df_ch[df_ch['tipo_venta']=='Venta']
     vp=ven_ch.groupby('proveedor').agg(imp=('Importe','sum')).reset_index()
+    # Pepsico specific metrics
+    pep_ch = df_ch[df_ch['proveedor'].str.strip()==PEPSICO]
+    pep_bol = pep_ch.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
+    pep_bol['ne'] = pep_bol['tipo_venta'].apply(lambda ts: all(t=='Devolucion' for t in ts))
+    pep_e  = int((~pep_bol['ne']).sum())
+    pep_ne = int(pep_bol['ne'].sum())
+    pep_vta = float(pep_ch[pep_ch['tipo_venta']=='Venta']['Importe'].sum())
+    pep_dev = float(abs(pep_ch[pep_ch['tipo_venta']=='Devolucion']['Importe'].sum()))
+    pep_cam = float(abs(pep_ch[pep_ch['tipo_venta']=='Cambio']['Importe'].sum()))
     venta_list.append({'ch':str(ch),'e':e,'ne':ne,
         'rp':{r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)} for _,r in rp.iterrows()},
         'ip':{r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)} for _,r in ip.iterrows()},
-        'vp':{r['proveedor']:round(float(r['imp']),0) for _,r in vp.iterrows()}})
+        'vp':{r['proveedor']:round(float(r['imp']),0) for _,r in vp.iterrows()},
+        'pep':{'vta':round(pep_vta,0),'dev':round(pep_dev,0),'cam':round(pep_cam,0),
+               'e':pep_e,'ne':pep_ne,
+               'pct_dev':round(pep_dev/pep_vta*100,2) if pep_vta else 0,
+               'pct_cam':round(pep_cam/pep_vta*100,2) if pep_vta else 0,
+               'efect':round(pep_e/(pep_e+pep_ne)*100,1) if (pep_e+pep_ne) else 0}})
 
 # ── REINCIDENTES ──────────────────────────────────────────────────────────────
 comp_cls2 = vc.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
