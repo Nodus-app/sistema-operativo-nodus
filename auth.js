@@ -1000,28 +1000,7 @@ function _generarPDFChofer(chofer) {
     }
   }
 
-  // ── RECHAZOS PEPSICO ──
-  var pepRejImp=0, pepRejPct='0.0', pepCamImp=0, pepCamPct='0.0';
-  if (window.D_VENTA) {
-    var vch2 = Object.values(D_VENTA).find(function(c){return c.ch===chofer||c.chofer===chofer;});
-    if (vch2) {
-      var pepKeyR = Object.keys(vch2.rp||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      var pepKeyC = Object.keys(vch2.ip||{}).find(function(k){return k.indexOf('Pepsico')>=0||k.indexOf('PEPSICO')>=0;});
-      var pepVenta = 0;
-      if (window.D_PROV) {
-        var pepProv2 = (Array.isArray(D_PROV)?D_PROV:Object.values(D_PROV)).find(function(p){return p.prov&&(p.prov.indexOf('Pepsico')>=0||p.prov.indexOf('PEPSICO')>=0);});
-        if (pepProv2) pepVenta = pepProv2.venta||0;
-      }
-      if (pepKeyR) {
-        pepRejImp = vch2.rp[pepKeyR].imp||0;
-        pepRejPct = pepVenta>0 ? (pepRejImp/pepVenta*100).toFixed(1) : '0.0';
-      }
-      if (pepKeyC) {
-        pepCamImp = vch2.ip[pepKeyC].imp||0;
-        pepCamPct = pepVenta>0 ? (pepCamImp/pepVenta*100).toFixed(1) : '0.0';
-      }
-    }
-  }
+  // rechazos pepsico ya calculados en bloque anterior via vch.pep
 
   // ── CONCILIACION ──
   var concAG=[], concAO=[], concGO=[];
