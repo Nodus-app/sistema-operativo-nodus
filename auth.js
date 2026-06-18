@@ -1112,3 +1112,122 @@ function _generarPDFChofer(chofer) {
   w.document.close();
   setTimeout(function(){ w.print(); }, 600);
 }
+
+// ── COMISIONES ────────────────────────────────────────────────────────────────
+function initComisiones(){
+  if(!window.D_COM||!D_COM.resumen) return;
+  var sel=document.getElementById('com-sel-ch');
+  if(sel){
+    sel.innerHTML='<option value="">Todos</option>';
+    D_COM.resumen.forEach(function(r){
+      var o=document.createElement('option');
+      o.value=r.chofer; o.textContent=r.chofer; sel.appendChild(o);
+    });
+  }
+  comFilt();
+}
+
+function comFilt(){
+  if(!window.D_COM) return;
+  var ch=(document.getElementById('com-sel-ch')||{}).value||'';
+  var res=D_COM.resumen.filter(function(r){return !ch||r.chofer===ch;});
+  var reps=D_COM.repartos.filter(function(r){return !ch||r.chofer===ch;});
+
+  var tVta=res.reduce(function(s,r){return s+r.venta_bruta;},0);
+  var tDev=res.reduce(function(s,r){return s+r.devoluciones;},0);
+  var tNet=res.reduce(function(s,r){return s+r.neto;},0);
+  var tCom=res.reduce(function(s,r){return s+r.comision;},0);
+
+  var CF=function(n){return Math.abs(Math.round(n)).toLocaleString('es-AR');};
+  var cards=[
+    {l:'Venta Bruta',v:'$'+CF(tVta),c:'#4db6ac'},
+    {l:'Devoluciones',v:'$'+CF(tDev),c:'#ff5252'},
+    {l:'Neto Comisionable',v:'$'+CF(tNet),c:'#69f0ae'},
+    {l:'Total Comisi\u00f3n',v:'$'+CF(tCom),c:'#ffab40'},
+  ];
+  var cardsEl=document.getElementById('com-cards');
+  if(cardsEl) cardsEl.innerHTML=cards.map(function(c){
+    return '<div style="background:#0d1a1a;border:1px solid #00b39430;border-radius:10px;padding:14px 18px">'
+      +'<div style="font-size:.72rem;color:#4db6ac;margin-bottom:5px">'+c.l+'</div>'
+      +'<div style="font-size:1.3rem;font-weight:700;color:'+c.c+'">'+c.v+'</div></div>';
+  }).join('');
+
+  var TH='padding:9px 12px;text-align:right;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430;white-space:nowrap';
+  var THL='padding:9px 12px;text-align:left;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430';
+  var h='<thead><tr>'
+    +'<th style="'+THL+'">Chofer</th>'
+    +'<th style="'+TH+'">Repartos</th>'
+    +'<th style="'+TH+'">Venta Bruta</th>'
+    +'<th style="'+TH+'">Devoluciones</th>'
+    +'<th style="'+TH+'">Neto</th>'
+    +'<th style="'+TH+'">% Efectivo</th>'
+    +'<th style="'+TH+'">Comisi\u00f3n</th>'
+    +'</tr></thead>';
+  var TD='padding:8px 12px;text-align:right;border-bottom:1px solid #00b39420';
+  var TDL='padding:8px 12px;border-bottom:1px solid #00b39420;cursor:pointer';
+  var rows=res.map(function(r,i){
+    var bg=i%2===0?'#0d1a1a':'#091212';
+    return '<tr style="background:'+bg+'" onclick="comSelCh(\''+r.chofer+'\')">'
+      +'<td style="'+TDL+';color:#00e5cc">'+r.chofer+'</td>'
+      +'<td style="'+TD+'">'+(r.repartos||0)+'</td>'
+      +'<td style="'+TD+'">$'+CF(r.venta_bruta)+'</td>'
+      +'<td style="'+TD+';color:#ff5252">$'+CF(r.devoluciones)+'</td>'
+      +'<td style="'+TD+';font-weight:600">$'+CF(r.neto)+'</td>'
+      +'<td style="'+TD+';color:#4db6ac">'+r.pct_efectivo+'%</td>'
+      +'<td style="'+TD+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
+      +'</tr>';
+  }).join('');
+  var pctT=tNet?(tCom/tNet*100).toFixed(2):0;
+  var TDF='padding:9px 12px;text-align:right;font-weight:700;background:#1e3535;border-top:2px solid #00b39440';
+  var TDFL='padding:9px 12px;font-weight:700;background:#1e3535;border-top:2px solid #00b39440';
+  rows+='<tr>'
+    +'<td style="'+TDFL+'">TOTAL</td>'
+    +'<td style="'+TDF+'">'+(res.reduce(function(s,r){return s+(r.repartos||0);},0))+'</td>'
+    +'<td style="'+TDF+'">$'+CF(tVta)+'</td>'
+    +'<td style="'+TDF+';color:#ff5252">$'+CF(tDev)+'</td>'
+    +'<td style="'+TDF+'">$'+CF(tNet)+'</td>'
+    +'<td style="'+TDF+';color:#4db6ac">'+pctT+'%</td>'
+    +'<td style="'+TDF+';color:#ffab40">$'+CF(tCom)+'</td>'
+    +'</tr>';
+  var tbRes=document.getElementById('com-tb-res');
+  if(tbRes) tbRes.innerHTML=h+'<tbody>'+rows+'</tbody>';
+
+  var repWrap=document.getElementById('com-rep-wrap');
+  if(ch && reps.length){
+    document.getElementById('com-rep-titulo').textContent=ch;
+    var TH2='padding:8px 12px;text-align:right;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430;white-space:nowrap';
+    var THL2='padding:8px 12px;text-align:left;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430';
+    var h2='<thead><tr>'
+      +'<th style="'+THL2+'">Reparto</th><th style="'+THL2+'">Fecha</th>'
+      +'<th style="'+THL2+'">Localidades</th>'
+      +'<th style="'+TH2+'">%</th><th style="'+TH2+'">Venta</th>'
+      +'<th style="'+TH2+'">Dev.</th><th style="'+TH2+'">Neto</th>'
+      +'<th style="'+TH2+'">Comisi\u00f3n</th></tr></thead>';
+    var TD2='padding:7px 12px;text-align:right;border-bottom:1px solid #00b39420';
+    var TDL2='padding:7px 12px;border-bottom:1px solid #00b39420';
+    var rows2=reps.map(function(r,i){
+      var bg=i%2===0?'#0d1a1a':'#091212';
+      return '<tr style="background:'+bg+'">'
+        +'<td style="'+TDL2+';color:#4db6ac">#'+r.rep+'</td>'
+        +'<td style="'+TDL2+'">'+r.fecha+'</td>'
+        +'<td style="'+TDL2+';color:#546e6e;font-size:.78rem">'+r.localidades+'</td>'
+        +'<td style="'+TD2+';color:#69f0ae">'+r.pct+'%</td>'
+        +'<td style="'+TD2+'">$'+CF(r.venta_bruta)+'</td>'
+        +'<td style="'+TD2+';color:#ff5252">$'+CF(r.devoluciones)+'</td>'
+        +'<td style="'+TD2+';font-weight:600">$'+CF(r.neto)+'</td>'
+        +'<td style="'+TD2+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
+        +'</tr>';
+    }).join('');
+    var tbRep=document.getElementById('com-tb-rep');
+    if(tbRep) tbRep.innerHTML=h2+'<tbody>'+rows2+'</tbody>';
+    if(repWrap) repWrap.style.display='block';
+  } else {
+    if(repWrap) repWrap.style.display='none';
+  }
+}
+
+function comSelCh(ch){
+  var sel=document.getElementById('com-sel-ch');
+  if(sel) sel.value=ch;
+  comFilt();
+}
