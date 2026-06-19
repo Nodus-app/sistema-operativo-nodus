@@ -21,7 +21,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 #app{display:none}
 .hdr{background:#0d1a1a;border-bottom:1px solid #00e5cc22;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:50px}
-.hdr-title{font-size:.9rem;font-weight:800;color:#00e5cc;text-shadow:0 0 10px #00e5cc66}
+.hdr-title{font-size:.9rem;font-weight:800;color:#e8eaf6}
 .hdr-sub{font-size:.72rem;color:#4db6ac;margin-left:8px}
 .btn-salir{background:none;border:1px solid #00b39440;color:#4db6ac;border-radius:6px;padding:5px 12px;font-size:.78rem;cursor:pointer;transition:all .2s}
 .btn-salir:hover{border-color:#00e5cc;color:#00e5cc}
@@ -112,10 +112,13 @@ tr:hover td{background:#0a1515}
 </div>
 <div id="app">
   <div class="hdr">
-    <div style="display:flex;align-items:baseline;gap:8px">
-      <span class="hdr-title">&#x1F4E6; 611 LogÃ­stica &mdash; Dashboard Operativo</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <img src="logo.png" alt="611 Logo" style="height:36px;width:auto;object-fit:contain">
+      <div style="display:flex;flex-direction:column;justify-content:center">
+        <span style="font-size:.95rem;font-weight:800;letter-spacing:.02em"><span style="color:#e53935">611</span> <span style="color:#e8eaf6">LOGÍSTICA</span> <span style="font-size:.65rem;color:#546e6e;font-weight:500">&mdash; Dashboard Operativo</span></span>
+      </div>
       <span class="hdr-sub" id="hdr-periodo" style="font-size:.72rem;color:#546e6e"></span>
-      <span style="font-size:.68rem;color:#4db6ac;margin-left:8px">&#128197; Actualizado: 18/06/2026 13:22</span>
+      <span style="font-size:.68rem;color:#4db6ac;margin-left:8px">&#128197; Actualizado: __BUILD_DT__</span>
       <button onclick="dlResumenChoferes()" style="background:#00695c30;border:1px solid #00e5cc;color:#00e5cc;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;margin-left:6px">&#128196; Descargar Resumen</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;font-size:.78rem">
