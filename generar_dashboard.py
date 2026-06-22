@@ -111,6 +111,7 @@ MOTIVO_MAP = {
     '14': 'No se entregó en fecha', '12': 'Retiró de Depósito', '3': 'Sin Dinero',
     '11': 'Sin Envase', '25': 'Sin Stock', '13': 'Zona peligrosa',
 }
+PEPSICO = 'Pepsico de Argentina SRL'
 MOLINOS = 'MOLINOS RIO DE LA PLATA SA'
 SOFTYS  = 'SOFTYS ARGENTINA SA'
 MOTIVO_MAP = {1.0:'Cerrado',2.0:'No hizo pedido',3.0:'Sin Dinero',
