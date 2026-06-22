@@ -903,7 +903,9 @@ _now_ar = datetime.now(_tz_ar)
 build_ts = str(int(_now_ar.timestamp()))
 build_dt = _now_ar.strftime('%d/%m/%Y %H:%M')
 html = html.replace('__BUILD_TS__', build_ts)
-html = html.replace('__BUILD_DT__', build_dt)
+# Replace placeholder OR any previously hardcoded date
+import re as _re
+html = _re.sub(r'__BUILD_DT__|\d{2}/\d{2}/\d{4} \d{2}:\d{2}(?= *</span>)', build_dt, html)
 
 with open(dash_path,'w',encoding='utf-8') as f: f.write(html)
 print(f"\nDashboard: {os.path.getsize(dash_path)//1024}KB")
