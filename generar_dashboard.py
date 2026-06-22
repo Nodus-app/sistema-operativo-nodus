@@ -288,13 +288,7 @@ for ch, df_ch in vc.groupby('chofer'):
 # ── DETALLE CLIENTES RECHAZADOS POR CHOFER ────────────────────────────────────
 # Para cada chofer: lista de clientes con devoluciones, ordenada por importe desc
 # Incluye: cliente, razon_social, direccion, importe, motivo, proveedor
-app_clientes = set()
-if app_path:
-    try:
-        _app_tmp = pd.read_excel(app_path)
-        _app_tmp['_clistr'] = _app_tmp['CLIENTE'].astype(str).str.strip()
-        app_clientes = set(_app_tmp['_clistr'].unique())
-    except: pass
+app_clientes = set()  # populated after app_path is defined below
 
 ch_det_map = {}
 dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
@@ -448,6 +442,13 @@ else:
 app_records = []
 conc_data   = {'app_ges':[],'app_only':[],'ges_only':[],'kpis':{},'rank_ch':[],'rank_vend':[]}
 app_path = find("Registro_de_Rechazos.xlsx")
+# Build app_clientes set for ch_det_map cross-reference
+if app_path:
+    try:
+        _app_tmp = pd.read_excel(app_path)
+        _app_tmp['_clistr'] = _app_tmp['CLIENTE'].astype(str).str.strip()
+        app_clientes = set(_app_tmp['_clistr'].unique())
+    except: pass
 if app_path:
     try:
         app = pd.read_excel(app_path)
