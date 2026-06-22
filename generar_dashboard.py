@@ -99,7 +99,18 @@ LOC_MAP_COM = {
     'FALDA DEL CARMEN':'FALDA DEL CARMEN','VILLA SANTA MARIA':'VILLA SANTA MARIA',
 }
 
-PEPSICO = 'Pepsico de Argentina SRL'
+MOTIVO_MAP = {
+    '1': 'Cerrado', '99': 'Dev. x Trámites internos', '16': 'Dirección incorrecta',
+    '18': 'Envases deteriorados', '5': 'Error Adm./Refacturación',
+    '10001': 'Error Armado: Código cambiado', '10000': 'Error Armado: Dif. unidades',
+    '10.001': 'Error Armado: Código cambiado', '10.000': 'Error Armado: Dif. unidades',
+    '10002': 'Error Armado: Producto roto', '10.002': 'Error Armado: Producto roto',
+    '7': 'Error de Chofer', '6': 'Error de Preventa', '10': 'Horario de Entrega',
+    '4': 'Lluvia', '8': 'Mal armado', '15': 'No alcanzó el tiempo',
+    '17': 'No está el dueño', '2': 'No hizo pedido', '9': 'No se cargó producto',
+    '14': 'No se entregó en fecha', '12': 'Retiró de Depósito', '3': 'Sin Dinero',
+    '11': 'Sin Envase', '25': 'Sin Stock', '13': 'Zona peligrosa',
+}
 MOLINOS = 'MOLINOS RIO DE LA PLATA SA'
 SOFTYS  = 'SOFTYS ARGENTINA SA'
 MOTIVO_MAP = {1.0:'Cerrado',2.0:'No hizo pedido',3.0:'Sin Dinero',
@@ -300,7 +311,13 @@ for ch, df_ch in dev_df.groupby('chofer'):
         if imp == 0: continue
         razon = str(g['Razon_Social'].iloc[0]).strip() if 'Razon_Social' in g.columns else ''
         direc = str(g['Direccion'].iloc[0]).strip() if 'Direccion' in g.columns else ''
-        motivo = str(g['motivodev'].iloc[0]).strip() if 'motivodev' in g.columns and pd.notna(g['motivodev'].iloc[0]) else ''
+        motivo_raw = str(g['motivodev'].iloc[0]).strip() if 'motivodev' in g.columns and pd.notna(g['motivodev'].iloc[0]) else ''
+        # Convert numeric code to float string then look up
+        try:
+            motivo_key = str(int(float(motivo_raw))) if motivo_raw else ''
+        except:
+            motivo_key = motivo_raw
+        motivo = MOTIVO_MAP.get(motivo_key, MOTIVO_MAP.get(motivo_raw, motivo_raw))[:30]
         det.append({
             'cli': cli, 'razon': razon[:40], 'dir': direc[:40],
             'prov': str(prov).strip()[:30], 'imp': round(imp, 0),
