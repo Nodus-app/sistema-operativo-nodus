@@ -206,7 +206,7 @@ tr:hover td{background:#0a1515}
         </table></div>
       </div>
     </div>
-    <div id="rp-chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" data-dl="chofer" class="rp" style="display:none">
+    <div id="rp-chofer" data-dl="chofer" class="rp" style="display:none">
       <div class="card"><h3>Por Chofer <button onclick="dlRejChofer()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
         <div class="tw"><table>
           <div class="fbar" style="margin-bottom:8px">
@@ -219,6 +219,13 @@ tr:hover td{background:#0a1515}
       </div>
       <thead><tr><th>Chofer / Per&#11015;odo</th><th>Venta ($)</th><th>Rechazo ($)</th><th>% Rechazo ($)</th><th>Efectividad</th></tr></thead>
           <tbody id="rej-ch-tb"></tbody>
+        </table></div>
+      </div>
+      <div class="card" id="rej-det-wrap" style="margin-top:14px;display:none">
+        <h3>&#128203; Detalle Clientes Rechazados — <span id="rej-det-titulo" style="color:#00e5cc"></span> <button onclick="dlRejDetalle()" style="background:#00695c30;color:#00e5cc;border:1px solid #00e5cc;border-radius:6px;padding:3px 10px;font-size:.76rem;cursor:pointer;margin-left:8px">&#11015; Excel</button></h3>
+        <div class="tw"><table>
+          <thead><tr><th>Cliente</th><th>Razón Social</th><th>Dirección</th><th>Proveedor</th><th>Importe ($)</th><th>Motivo</th><th>App?</th></tr></thead>
+          <tbody id="rej-det-tb"></tbody>
         </table></div>
       </div>
     </div>

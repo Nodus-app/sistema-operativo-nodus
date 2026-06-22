@@ -285,6 +285,36 @@ for ch, df_ch in vc.groupby('chofer'):
         m = prov_met(df_cp.reset_index(drop=True))
         if m and m['venta']>0: chofer_prov_map[str(ch).strip()].append({'prov':str(p).strip(),**m})
 
+# ── DETALLE CLIENTES RECHAZADOS POR CHOFER ────────────────────────────────────
+# Para cada chofer: lista de clientes con devoluciones, ordenada por importe desc
+# Incluye: cliente, razon_social, direccion, importe, motivo, proveedor
+app_clientes = set()
+if app_path:
+    try:
+        _app_tmp = pd.read_excel(app_path)
+        _app_tmp['_clistr'] = _app_tmp['CLIENTE'].astype(str).str.strip()
+        app_clientes = set(_app_tmp['_clistr'].unique())
+    except: pass
+
+ch_det_map = {}
+dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
+dev_df['cli_str'] = dev_df['Cliente'].astype(str).str.strip()
+for ch, df_ch in dev_df.groupby('chofer'):
+    det = []
+    for (cli, prov), g in df_ch.groupby(['cli_str', 'proveedor']):
+        imp = float(abs(g['Importe'].sum()))
+        if imp == 0: continue
+        razon = str(g['Razon_Social'].iloc[0]).strip() if 'Razon_Social' in g.columns else ''
+        direc = str(g['Direccion'].iloc[0]).strip() if 'Direccion' in g.columns else ''
+        motivo = str(g['motivodev'].iloc[0]).strip() if 'motivodev' in g.columns and pd.notna(g['motivodev'].iloc[0]) else ''
+        det.append({
+            'cli': cli, 'razon': razon[:40], 'dir': direc[:40],
+            'prov': str(prov).strip()[:30], 'imp': round(imp, 0),
+            'motivo': motivo[:30], 'app': 1 if cli in app_clientes else 0
+        })
+    det.sort(key=lambda x: -x['imp'])
+    if det: ch_det_map[str(ch).strip()] = det
+
 print(f"  Rechazos: {len(rej_comps)} comp. rechazados, {len(by_motivo)} motivos")
 
 # ── RUTAS ─────────────────────────────────────────────────────────────────────
@@ -791,6 +821,7 @@ DATA_JS = '\n'.join([
     make_chunks('D_CHOFER', by_chofer),
     make_chunks('D_PROV',   prov_metrics_list),
     make_chunks('D_CHPROV', chofer_prov_map),
+    make_chunks('D_CH_DET', ch_det_map),
     make_chunks('D_VENTA',  venta_list),
     make_chunks('D_ROUTES', route_index),
     make_chunks('D_CLI',    client_map),

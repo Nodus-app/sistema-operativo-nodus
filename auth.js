@@ -237,7 +237,7 @@ function renderRejAll(){
   if(!vistaRej||vistaRej==='mes') chData.sort(function(a,b){return b.rr-a.rr;});
   document.getElementById('rej-ch-tb').innerHTML=chData.length?
     chData.map(function(c){
-      return '<tr><td><strong>'+c.lbl+'</strong></td>'+
+      return '<tr style="cursor:pointer" onclick="showRejDet(\''+c.lbl+'\')"><td><strong>'+c.lbl+'</strong></td>'+
         '<td style="text-align:right">$'+F(c.vv)+'</td>'+
         '<td style="text-align:right;color:#ff5252">$'+F(c.rr)+'</td>'+
         '<td>'+PR(c.pRec,'#ff5252',0.05)+' '+P2(c.pRec)+'</td>'+
@@ -1230,4 +1230,56 @@ function comSelCh(ch){
   var sel=document.getElementById('com-sel-ch');
   if(sel) sel.value=ch;
   comFilt();
+}
+
+// ── DETALLE CLIENTES RECHAZADOS POR CHOFER ────────────────────────────────────
+function showRejDet(chofer) {
+  if (!window.D_CH_DET) return;
+  var selProv = (document.getElementById('rej-prov-f')||{}).value||'';
+  var det = D_CH_DET[chofer] || [];
+  if (selProv) det = det.filter(function(r){ return r.prov===selProv; });
+  det.sort(function(a,b){ return b.imp - a.imp; });
+
+  var wrap = document.getElementById('rej-det-wrap');
+  var titulo = document.getElementById('rej-det-titulo');
+  var tb = document.getElementById('rej-det-tb');
+  if (!wrap || !tb) return;
+
+  if (titulo) titulo.textContent = chofer;
+
+  var TH = 'padding:8px 10px;text-align:left;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430';
+  var THR = 'padding:8px 10px;text-align:right;color:#4db6ac;font-weight:600;border-bottom:1px solid #00b39430';
+
+  tb.innerHTML = det.length ? det.map(function(r, i){
+    var bg = i%2===0 ? '#0d1a1a' : '#091212';
+    var appBadge = r.app
+      ? '<span style="background:#00695c30;color:#69f0ae;padding:2px 8px;border-radius:4px;font-size:.75rem">App</span>'
+      : '<span style="background:#b7131320;color:#ff5252;padding:2px 8px;border-radius:4px;font-size:.75rem">Sin App</span>';
+    return '<tr style="background:'+bg+'">'
+      +'<td style="padding:7px 10px;color:#4db6ac;font-weight:700">'+r.cli+'</td>'
+      +'<td style="padding:7px 10px;font-size:.82rem">'+r.razon+'</td>'
+      +'<td style="padding:7px 10px;font-size:.78rem;color:#546e6e">'+r.dir+'</td>'
+      +'<td style="padding:7px 10px;font-size:.78rem;color:#4db6ac">'+r.prov+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;color:#ff5252;font-weight:700">$'+F(r.imp)+'</td>'
+      +'<td style="padding:7px 10px;font-size:.78rem">'+r.motivo+'</td>'
+      +'<td style="padding:7px 10px">'+appBadge+'</td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">Sin rechazos</td></tr>';
+
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function dlRejDetalle() {
+  var titulo = (document.getElementById('rej-det-titulo')||{}).textContent||'';
+  var selProv = (document.getElementById('rej-prov-f')||{}).value||'';
+  if (!window.D_CH_DET || !titulo) return;
+  var det = D_CH_DET[titulo] || [];
+  if (selProv) det = det.filter(function(r){ return r.prov===selProv; });
+  det.sort(function(a,b){ return b.imp - a.imp; });
+  var rows = det.map(function(r){
+    return [r.cli, r.razon, r.dir, r.prov, r.imp, r.motivo, r.app?'App':'Sin App'];
+  });
+  dlXLS(rows, ['Cliente','Razón Social','Dirección','Proveedor','Importe $','Motivo','App?'],
+    'detalle_rechazos_'+titulo.replace(/ /g,'_'));
 }
