@@ -457,7 +457,9 @@ function filtRuta(){
     if(!chMatchTipo(r.ch))return false;
     if(fQ){
       var cls=D_CLI[String(r.rep)]||[];
-      return cls.some(function(c){return c[1].toLowerCase().includes(fQ)||c[2].toLowerCase().includes(fQ);});
+      return cls.some(function(c){
+        return String(c[0]).includes(fQ)||(c[1]||'').toLowerCase().includes(fQ)||(c[2]||'').toLowerCase().includes(fQ);
+      });
     }
     return true;
   });
