@@ -299,7 +299,7 @@ app_clientes = set()  # populated after app_path is defined below
 
 ch_det_map = {}
 dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
-dev_df['cli_str'] = dev_df['Cliente'].astype(str).str.strip()
+dev_df['cli_str'] = dev_df['Cliente'].apply(lambda v: str(int(float(v))) if pd.notna(v) else '')
 for ch, df_ch in dev_df.groupby('chofer'):
     det = []
     for (cli, prov), g in df_ch.groupby(['cli_str', 'proveedor']):
@@ -454,7 +454,10 @@ app_path = find("Registro_de_Rechazos.xlsx")
 if app_path:
     try:
         _app_tmp = pd.read_excel(app_path)
-        _app_tmp['_clistr'] = _app_tmp['CLIENTE'].astype(str).str.strip()
+        def _cli_str(v):
+            try: return str(int(float(v)))
+            except: return str(v).strip()
+        _app_tmp['_clistr'] = _app_tmp['CLIENTE'].apply(_cli_str)
         app_clientes = set(_app_tmp['_clistr'].unique())
     except: pass
 if app_path:
