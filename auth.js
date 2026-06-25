@@ -1210,7 +1210,8 @@ function comFilt(){
       +'<th style="'+THL2+'">Localidades</th>'
       +'<th style="'+TH2+'">%</th><th style="'+TH2+'">Venta</th>'
       +'<th style="'+TH2+'">Dev.</th><th style="'+TH2+'">Neto</th>'
-      +'<th style="'+TH2+'">Comisi\u00f3n</th></tr></thead>';
+      +'<th style="'+TH2+'">Comisi\u00f3n</th>'
+      +'<th style="'+TH2+'">Retirado</th></tr></thead>';
     var TD2='padding:7px 12px;text-align:right;border-bottom:1px solid #00b39420';
     var TDL2='padding:7px 12px;border-bottom:1px solid #00b39420';
     var rows2=reps.map(function(r,i){
