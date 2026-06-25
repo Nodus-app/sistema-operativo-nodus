@@ -746,10 +746,14 @@ com_data = {'resumen': [], 'repartos': [], 'periodo': PERIODO}
 com_path = find("comisiones.xlsx")
 if com_path:
     try:
-        com_tbl = pd.read_excel(com_path)
-        tbl = com_tbl[['LOCALIDAD','%']].dropna()
-        tbl['LOCALIDAD'] = tbl['LOCALIDAD'].str.strip().str.upper()
-        loc_pct = dict(zip(tbl['LOCALIDAD'], tbl['%'].astype(float)))
+        com_tbl = pd.read_excel(com_path, header=0)
+        # Use columns E-F (index 4,5) which have the updated rates
+        tbl = com_tbl.iloc[:, [4, 5]].copy()
+        tbl.columns = ['LOCALIDAD', 'PCT']
+        tbl = tbl.dropna(subset=['LOCALIDAD'])
+        tbl['LOCALIDAD'] = tbl['LOCALIDAD'].astype(str).str.strip().str.upper()
+        tbl = tbl[tbl['PCT'].notna() & (tbl['LOCALIDAD'] != 'LOCALIDAD') & (tbl['LOCALIDAD'] != 'NAN')]
+        loc_pct = dict(zip(tbl['LOCALIDAD'], tbl['PCT'].astype(float)))
 
         def _pct_por_loc(loc_raw, chofer, cod_ven):
             # Reglas fijas por chofer/vendedor
@@ -821,6 +825,50 @@ if com_path:
         com_data['resumen']  = sorted(resumen_map.values(), key=lambda x: -x['comision'])
         com_data['repartos'] = sorted(repartos_com, key=lambda x: (x['chofer'], x['fecha']))
         print(f"  Comisiones: {len(com_data['resumen'])} choferes, {len(com_data['repartos'])} repartos")
+
+        # ── COMISION RETIRADA (comision_chofer.xlsx) ──────────────────────────
+        NOMBRE_COM_MAP = {
+            'JUNCOS LUIS EZEQUIEL':       'EZEQUIEL JUNCOS',
+            'BELEN EMILIANO AGUSTIN':     'BELEN AGUSTIN',
+            'GONZALEZ CECILIA GUADALUPE': 'CECILIA GONZALEZ',
+            'GUIRAO LUIS ANTONIO':        'LUIS GUIRAO',
+            'ROMANO RODRIGO ERNESTO':     'RODRIGO ROMANO',
+            'IRIARTE MAURO ALEJANDRO':    'MAURO IRIARTE',
+            'CANELO PABLO FERNANDO':      'PABLO CANELO',
+            'NIETO GUSTAVO ATILIO':       'GUSTAVO NIETO',
+            'GUEVARA ENRIQUE LEONARDO':   'LEONARDO GUEVARA',
+            'PALLOTI DUILIO':             'DUILIO PALLOTTI',
+            'ADRIAN ISMAEL TALAVERA':     'TALAVERA ADRIAN',
+            'ALLENDE ALEJANDRO JAVIER':   'ALLENDE ALEJANDRO JAVIER',
+        }
+        ret_path = find("comision_chofer.xlsx")
+        if ret_path:
+            try:
+                ret_df = pd.read_excel(ret_path)
+                ret_df['chofer_norm'] = ret_df['razon_social'].map(NOMBRE_COM_MAP)
+                ret_df['fecha_str']   = pd.to_datetime(ret_df['compra_fecha'], errors='coerce').dt.strftime('%Y-%m-%d')
+                # Total retirado por chofer
+                ret_tot = ret_df.groupby('chofer_norm')['neto'].sum().to_dict()
+                # Detalle por chofer+fecha
+                ret_det = {}
+                for ch_n, g in ret_df[ret_df['chofer_norm'].notna()].groupby('chofer_norm'):
+                    ret_det[ch_n] = {row['fecha_str']: round(float(row['neto']),0)
+                                     for _, row in g.iterrows() if pd.notna(row['fecha_str'])}
+                # Enrich resumen
+                for r in com_data['resumen']:
+                    ch = r['chofer']
+                    retirado = round(float(ret_tot.get(ch, 0)), 0)
+                    r['retirado']   = retirado
+                    r['diferencia'] = round(r['comision'] - retirado, 0)
+                # Enrich repartos with daily withdrawal
+                for r in com_data['repartos']:
+                    ch = r['chofer']
+                    fec = r['fecha']
+                    r['retirado_dia'] = ret_det.get(ch, {}).get(fec, 0)
+                com_data['ret_det'] = {ch: list(v.items()) for ch, v in ret_det.items()}
+                print(f"  Comisiones retiradas: {len(ret_tot)} choferes")
+            except Exception as e:
+                print(f"  Comisiones retiradas: error {e}")
     except Exception as e:
         print(f"  Comisiones: error {e}")
 else:

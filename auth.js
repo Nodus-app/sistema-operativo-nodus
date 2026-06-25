@@ -1164,6 +1164,8 @@ function comFilt(){
     +'<th style="'+TH+'">Neto</th>'
     +'<th style="'+TH+'">% Efectivo</th>'
     +'<th style="'+TH+'">Comisi\u00f3n</th>'
+    +'<th style="'+TH+'">Retirado $</th>'
+    +'<th style="'+TH+'">Diferencia $</th>'
     +'</tr></thead>';
   var TD='padding:8px 12px;text-align:right;border-bottom:1px solid #00b39420';
   var TDL='padding:8px 12px;border-bottom:1px solid #00b39420;cursor:pointer';
@@ -1177,6 +1179,8 @@ function comFilt(){
       +'<td style="'+TD+';font-weight:600">$'+CF(r.neto)+'</td>'
       +'<td style="'+TD+';color:#4db6ac">'+r.pct_efectivo+'%</td>'
       +'<td style="'+TD+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
+      +'<td style="'+TD+';color:#4db6ac">$'+CF(r.retirado||0)+'</td>'
+      +'<td style="'+TD+';color:"+(r.diferencia>0?'"#69f0ae"':r.diferencia<0?'"#ff5252"':'"#4db6ac"')+";font-weight:700">"+(r.diferencia>0?'+':'')+CF(r.diferencia||0)+'</td>'
       +'</tr>';
   }).join('');
   var pctT=tNet?(tCom/tNet*100).toFixed(2):0;
@@ -1190,6 +1194,8 @@ function comFilt(){
     +'<td style="'+TDF+'">$'+CF(tNet)+'</td>'
     +'<td style="'+TDF+';color:#4db6ac">'+pctT+'%</td>'
     +'<td style="'+TDF+';color:#ffab40">$'+CF(tCom)+'</td>'
+    +'<td style="'+TDF+'">-</td>'
+    +'<td style="'+TDF+'">-</td>'
     +'</tr>';
   var tbRes=document.getElementById('com-tb-res');
   if(tbRes) tbRes.innerHTML=h+'<tbody>'+rows+'</tbody>';
@@ -1218,6 +1224,7 @@ function comFilt(){
         +'<td style="'+TD2+';color:#ff5252">$'+CF(r.devoluciones)+'</td>'
         +'<td style="'+TD2+';font-weight:600">$'+CF(r.neto)+'</td>'
         +'<td style="'+TD2+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
+        +'<td style="'+TD2+';color:#4db6ac">'+(r.retirado_dia?'$'+CF(r.retirado_dia):'-')+'</td>'
         +'</tr>';
     }).join('');
     var tbRep=document.getElementById('com-tb-rep');
