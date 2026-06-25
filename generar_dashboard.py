@@ -297,31 +297,8 @@ for ch, df_ch in vc.groupby('chofer'):
 # Incluye: cliente, razon_social, direccion, importe, motivo, proveedor
 app_clientes = set()  # populated after app_path is defined below
 
-ch_det_map = {}
-dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
-dev_df['cli_str'] = dev_df['Cliente'].apply(lambda v: str(int(float(v))) if pd.notna(v) else '')
-
-# Build app_ges_keys from conciliacion data (cliente codes that matched App+GESCOM)
-app_ges_keys = set()
-for r in conc_data.get('app_ges', []):
-    try: app_ges_keys.add(str(int(float(r['cliente']))))
-    except: app_ges_keys.add(str(r['cliente']).strip())
-for ch, df_ch in dev_df.groupby('chofer'):
-    det = []
-    for (cli, prov), g in df_ch.groupby(['cli_str', 'proveedor']):
-        imp = float(abs(g['Importe'].sum()))
-        if imp == 0: continue
-        razon = str(g['Razon_Social'].iloc[0]).strip() if 'Razon_Social' in g.columns else ''
-        direc = str(g['Direccion'].iloc[0]).strip() if 'Direccion' in g.columns else ''
-        motivo_val = g['motivodev'].iloc[0] if 'motivodev' in g.columns and pd.notna(g['motivodev'].iloc[0]) else None
-        motivo = MOTIVO_MAP.get(float(motivo_val), str(motivo_val) if motivo_val else '')[:30] if motivo_val is not None else ''
-        det.append({
-            'cli': cli, 'razon': razon[:40], 'dir': direc[:40],
-            'prov': str(prov).strip()[:30], 'imp': round(imp, 0),
-            'motivo': motivo[:30], 'app': 1 if cli in app_ges_keys else 0
-        })
-    det.sort(key=lambda x: -x['imp'])
-    if det: ch_det_map[str(ch).strip()] = det
+ch_det_map = {}  # built after conciliacion
+app_ges_keys = set()  # built after conciliacion
 
 print(f"  Rechazos: {len(rej_comps)} comp. rechazados, {len(by_motivo)} motivos")
 
@@ -632,6 +609,29 @@ if app_path:
             'pct_saved': pct_saved, 'total_app': total_app,
         }
         print(f"  Conciliacion: {len(conc_data['app_ges'])} app+ges, {len(conc_data['app_only'])} solo app, {len(conc_data['ges_only'])} solo ges")
+
+        # Build app_ges_keys and ch_det_map after conciliacion
+        for r in conc_data.get('app_ges', []):
+            try: app_ges_keys.add(str(int(float(r['cliente']))))
+            except: app_ges_keys.add(str(r['cliente']).strip())
+        dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
+        dev_df['cli_str'] = dev_df['Cliente'].apply(lambda v: str(int(float(v))) if pd.notna(v) else '')
+        for ch, df_ch in dev_df.groupby('chofer'):
+            det = []
+            for (cli, prov), g in df_ch.groupby(['cli_str', 'proveedor']):
+                imp = float(abs(g['Importe'].sum()))
+                if imp == 0: continue
+                razon = str(g['Razon_Social'].iloc[0]).strip() if 'Razon_Social' in g.columns else ''
+                direc = str(g['Direccion'].iloc[0]).strip() if 'Direccion' in g.columns else ''
+                motivo_val = g['motivodev'].iloc[0] if 'motivodev' in g.columns and pd.notna(g['motivodev'].iloc[0]) else None
+                motivo = MOTIVO_MAP.get(float(motivo_val), str(motivo_val) if motivo_val else '')[:30] if motivo_val is not None else ''
+                det.append({
+                    'cli': cli, 'razon': razon[:40], 'dir': direc[:40],
+                    'prov': str(prov).strip()[:30], 'imp': round(imp, 0),
+                    'motivo': motivo[:30], 'app': 1 if cli in app_ges_keys else 0
+                })
+            det.sort(key=lambda x: -x['imp'])
+            if det: ch_det_map[str(ch).strip()] = det
     except Exception as e:
         import traceback; traceback.print_exc()
         print(f"  App rechazos: error {e}")
