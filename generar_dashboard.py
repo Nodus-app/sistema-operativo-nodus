@@ -300,6 +300,12 @@ app_clientes = set()  # populated after app_path is defined below
 ch_det_map = {}
 dev_df = vc[vc['tipo_venta']=='Devolucion'].copy()
 dev_df['cli_str'] = dev_df['Cliente'].apply(lambda v: str(int(float(v))) if pd.notna(v) else '')
+
+# Build app_ges_keys from conciliacion data (cliente codes that matched App+GESCOM)
+app_ges_keys = set()
+for r in conc_data.get('app_ges', []):
+    try: app_ges_keys.add(str(int(float(r['cliente']))))
+    except: app_ges_keys.add(str(r['cliente']).strip())
 for ch, df_ch in dev_df.groupby('chofer'):
     det = []
     for (cli, prov), g in df_ch.groupby(['cli_str', 'proveedor']):
@@ -312,7 +318,7 @@ for ch, df_ch in dev_df.groupby('chofer'):
         det.append({
             'cli': cli, 'razon': razon[:40], 'dir': direc[:40],
             'prov': str(prov).strip()[:30], 'imp': round(imp, 0),
-            'motivo': motivo[:30], 'app': 1 if cli in app_clientes else 0
+            'motivo': motivo[:30], 'app': 1 if cli in app_ges_keys else 0
         })
     det.sort(key=lambda x: -x['imp'])
     if det: ch_det_map[str(ch).strip()] = det

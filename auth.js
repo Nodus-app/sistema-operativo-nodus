@@ -1255,8 +1255,8 @@ function showRejDet(chofer) {
   tb.innerHTML = det.length ? det.map(function(r, i){
     var bg = i%2===0 ? '#0d1a1a' : '#091212';
     var appBadge = r.app
-      ? '<span style="background:#00695c30;color:#69f0ae;padding:2px 8px;border-radius:4px;font-size:.75rem">App</span>'
-      : '<span style="background:#b7131320;color:#ff5252;padding:2px 8px;border-radius:4px;font-size:.75rem">Sin App</span>';
+      ? '<span style="background:#b7131320;color:#ff6b8a;padding:2px 8px;border-radius:4px;font-size:.75rem">App+GESCOM</span>'
+      : '<span style="background:#1e3535;color:#4db6ac;padding:2px 8px;border-radius:4px;font-size:.75rem">Sin App</span>';
     return '<tr style="background:'+bg+'">'
       +'<td style="padding:7px 10px;color:#4db6ac;font-weight:700">'+r.cli+'</td>'
       +'<td style="padding:7px 10px;font-size:.82rem">'+r.razon+'</td>'
