@@ -777,7 +777,7 @@ if com_path:
             vta  = float(g[g['tipo_venta']=='Venta']['Importe'].sum())
             dev  = float(g[g['tipo_venta']=='Devolucion']['Importe'].sum())
             cam  = float(g[g['tipo_venta']=='Cambio']['Importe'].sum())
-            neto = vta - dev - cam
+            neto = vta + dev + cam  # dev y cam ya son negativos en Importe
             # Pct máximo de las localidades del reparto
             cod_ven = g['cod_ven'].iloc[0]
             pcts = [_pct_por_loc(loc, chofer, cod_ven)
