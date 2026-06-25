@@ -1180,7 +1180,7 @@ function comFilt(){
       +'<td style="'+TD+';color:#4db6ac">'+r.pct_efectivo+'%</td>'
       +'<td style="'+TD+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
       +'<td style="'+TD+';color:#4db6ac">$'+CF(r.retirado||0)+'</td>'
-      +'<td style="'+TD+';color:"+(r.diferencia>0?'"#69f0ae"':r.diferencia<0?'"#ff5252"':'"#4db6ac"')+";font-weight:700">"+(r.diferencia>0?'+':'')+CF(r.diferencia||0)+'</td>'
+      +(function(){var d=r.diferencia||0;var c=d>0?'#69f0ae':d<0?'#ff5252':'#4db6ac';var s=d>0?'+':'';return '<td style="'+TD+';color:'+c+';font-weight:700">'+s+CF(d)+'</td>';})()
       +'</tr>';
   }).join('');
   var pctT=tNet?(tCom/tNet*100).toFixed(2):0;
