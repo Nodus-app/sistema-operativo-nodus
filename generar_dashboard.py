@@ -540,12 +540,13 @@ if app_path:
                 'razon': '',
             }
 
-            # Buscar en GESCOM: fecha_app dentro de [fecha_ges, fecha_ges+2biz]
+            # Buscar en GESCOM: fecha_app dentro de [fecha_ges-1biz, fecha_ges+2biz]
             found_key = None
             for (fec_ges, gkey) in sorted(ges_por_cliente.get(cli, []), key=lambda x: x[0]):
                 if gkey in matched_ges_keys: continue
-                limite = add_biz_days(fec_ges, 2)
-                if fec_ges <= fec_app <= limite:
+                limite_sup = add_biz_days(fec_ges, 2)
+                limite_inf = fec_ges - _td(days=2)  # -1 dia habil aprox
+                if limite_inf <= fec_app <= limite_sup:
                     found_key = gkey
                     break
 
