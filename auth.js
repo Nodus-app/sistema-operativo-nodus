@@ -1211,7 +1211,8 @@ function comFilt(){
       +'<th style="'+TH2+'">%</th><th style="'+TH2+'">Venta</th>'
       +'<th style="'+TH2+'">Dev.</th><th style="'+TH2+'">Neto</th>'
       +'<th style="'+TH2+'">Comisi\u00f3n</th>'
-      +'<th style="'+TH2+'">Retirado</th></tr></thead>';
+      +'<th style="'+TH2+'">Retirado</th>'
+      +'<th style="'+TH2+'">Diferencia</th></tr></thead>';
     var TD2='padding:7px 12px;text-align:right;border-bottom:1px solid #00b39420';
     var TDL2='padding:7px 12px;border-bottom:1px solid #00b39420';
     var rows2=reps.map(function(r,i){
@@ -1219,13 +1220,14 @@ function comFilt(){
       return '<tr style="background:'+bg+'">'
         +'<td style="'+TDL2+';color:#4db6ac">#'+r.rep+'</td>'
         +'<td style="'+TDL2+'">'+r.fecha+'</td>'
-        +'<td style="'+TDL2+';color:#546e6e;font-size:.78rem">'+r.localidades+'</td>'
+        +'<td style="'+TDL2+';color:#546e6e;font-size:.78rem;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+r.localidades+'">'+r.localidades+'</td>'
         +'<td style="'+TD2+';color:#69f0ae">'+r.pct+'%</td>'
         +'<td style="'+TD2+'">$'+CF(r.venta_bruta)+'</td>'
         +'<td style="'+TD2+';color:#ff5252">$'+CF(r.devoluciones)+'</td>'
         +'<td style="'+TD2+';font-weight:600">$'+CF(r.neto)+'</td>'
         +'<td style="'+TD2+';color:#ffab40;font-weight:700">$'+CF(r.comision)+'</td>'
         +'<td style="'+TD2+';color:#4db6ac">'+(r.retirado_dia?'$'+CF(r.retirado_dia):'-')+'</td>'
+        +(function(){var d=(r.comision||0)-(r.retirado_dia||0);if(!r.retirado_dia)return '<td style="'+TD2+'">-</td>';var c=d>0?'#69f0ae':d<0?'#ff5252':'#4db6ac';return '<td style="'+TD2+';color:'+c+';font-weight:600">'+(d>0?'+':'')+CF(d)+'</td>';})()
         +'</tr>';
     }).join('');
     var tbRep=document.getElementById('com-tb-rep');

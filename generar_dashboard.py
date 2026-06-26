@@ -785,12 +785,14 @@ if com_path:
             neto = vta + dev + cam  # dev y cam ya son negativos en Importe
             # Pct máximo de las localidades del reparto
             cod_ven = g['cod_ven'].iloc[0]
-            pcts = [_pct_por_loc(loc, chofer, cod_ven)
-                    for loc in g['localidad'].dropna().unique()]
-            pcts = [p for p in pcts if p is not None]
-            pct_max = max(pcts) if pcts else 0.0
+            pcts_map = {loc: _pct_por_loc(loc, chofer, cod_ven)
+                        for loc in g['localidad'].dropna().unique()}
+            pcts_map = {k: v for k, v in pcts_map.items() if v is not None}
+            pct_max = max(pcts_map.values()) if pcts_map else 0.0
             comision = round(neto * pct_max)
-            locs = ', '.join(sorted(set(str(l) for l in g['localidad'].dropna().unique()))[:5])
+            # Solo mostrar la localidad que determinó el % máximo
+            loc_max = max(pcts_map, key=pcts_map.get) if pcts_map else ''
+            locs = str(loc_max).strip()
             fecha = str(g['fecha_str'].iloc[0]) if 'fecha_str' in g.columns else ''
             repartos_com.append({
                 'rep':     int(rep_id),
