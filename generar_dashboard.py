@@ -850,23 +850,28 @@ if com_path:
                 ret_df['fecha_str']   = pd.to_datetime(ret_df['compra_fecha'], errors='coerce').dt.strftime('%Y-%m-%d')
                 # Total retirado por chofer
                 ret_tot = ret_df.groupby('chofer_norm')['neto'].sum().to_dict()
-                # Detalle por chofer+fecha
-                ret_det = {}
-                for ch_n, g in ret_df[ret_df['chofer_norm'].notna()].groupby('chofer_norm'):
-                    ret_det[ch_n] = {row['fecha_str']: round(float(row['neto']),0)
-                                     for _, row in g.iterrows() if pd.notna(row['fecha_str'])}
+                # Detalle por chofer+reparto (match exacto)
+                ret_det_rep = {}
+                for _, row in ret_df[ret_df['chofer_norm'].notna()].iterrows():
+                    ch_n = row['chofer_norm']
+                    rep  = row['reparto']
+                    if pd.isna(rep): continue
+                    rep_key = str(int(float(rep)))
+                    if ch_n not in ret_det_rep:
+                        ret_det_rep[ch_n] = {}
+                    ret_det_rep[ch_n][rep_key] = round(float(row['neto']), 0)
                 # Enrich resumen
                 for r in com_data['resumen']:
                     ch = r['chofer']
                     retirado = round(float(ret_tot.get(ch, 0)), 0)
                     r['retirado']   = retirado
                     r['diferencia'] = round(r['comision'] - retirado, 0)
-                # Enrich repartos with daily withdrawal
+                # Enrich repartos with withdrawal by reparto number
                 for r in com_data['repartos']:
-                    ch = r['chofer']
-                    fec = r['fecha']
-                    r['retirado_dia'] = ret_det.get(ch, {}).get(fec, 0)
-                com_data['ret_det'] = {ch: list(v.items()) for ch, v in ret_det.items()}
+                    ch  = r['chofer']
+                    rep = str(int(r.get('rep', 0))) if r.get('rep') else ''
+                    r['retirado_dia'] = ret_det_rep.get(ch, {}).get(rep, 0)
+                com_data['ret_det'] = {ch: list(v.items()) for ch, v in ret_det_rep.items()}
                 print(f"  Comisiones retiradas: {len(ret_tot)} choferes")
             except Exception as e:
                 print(f"  Comisiones retiradas: error {e}")
