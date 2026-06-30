@@ -457,8 +457,10 @@ function filtRuta(){
     if(!chMatchTipo(r.ch))return false;
     if(fQ){
       var cls=D_CLI[String(r.rep)]||[];
+      var isNum=/^\d+$/.test(fQ);
       return cls.some(function(c){
-        return String(c[0]).includes(fQ)||(c[1]||'').toLowerCase().includes(fQ)||(c[2]||'').toLowerCase().includes(fQ);
+        if(isNum) return String(c[0])===fQ;
+        return String(c[0]).toLowerCase().includes(fQ)||(c[1]||'').toLowerCase().includes(fQ)||(c[2]||'').toLowerCase().includes(fQ);
       });
     }
     return true;
