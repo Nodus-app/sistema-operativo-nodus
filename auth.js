@@ -1356,51 +1356,6 @@ function cambiarMes(label) {
     var tabMatch = (activeBtn.getAttribute('onclick')||'').match(/'([^']+)'/);
     if (tabMatch) goTab(tabMatch[1], activeBtn);
   }
-
-  // Update KPI cards (top bar)
-  var kpis = {
-    venta_neta:    h.venta_neta,
-    rechazo_imp:   h.devoluciones,
-    pct_rechazo:   h.pct_rechazo,
-    efectividad:   h.efectividad,
-    entregados:    h.entregados,
-    no_entregados: h.no_entregados,
-    cart_sal:      h.cart_sal,
-    cart_ret:      h.cart_ret,
-    cart_pct:      h.cart_pct,
-  };
-
-  // Update visible KPI elements if they exist
-  var F = function(n){ return Math.round(n).toLocaleString('es-AR'); };
-  var trySet = function(id, val) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = val;
-  };
-
-  trySet('kpi-venta',    '$' + F(h.venta_neta));
-  trySet('kpi-rechazo',  '$' + F(h.devoluciones));
-  trySet('kpi-pct-rec',  h.pct_rechazo.toFixed(2) + '%');
-  trySet('kpi-efect',    h.efectividad.toFixed(1) + '%');
-  trySet('kpi-entregados', F(h.entregados));
-  trySet('kpi-noent',    F(h.no_entregados));
-  trySet('kpi-cart-sal', F(h.cart_sal));
-  trySet('kpi-cart-ret', F(h.cart_ret));
-  trySet('kpi-cart-pct', h.cart_pct.toFixed(1) + '%');
-  trySet('kpi-pep-vta',  '$' + F(h.pep_vta));
-  trySet('kpi-pep-dev',  '$' + F(h.pep_dev));
-  trySet('kpi-pep-pct',  h.pep_pct_dev.toFixed(2) + '%');
-
-  // Re-render all active tabs with current period context
-  var activeTab = document.querySelector('.tab.on');
-  if (activeTab && activeTab.onclick) {
-    var id = activeTab.getAttribute('data-tab') ||
-             (activeTab.onclick.toString().match(/'([^']+)'/) || [])[1];
-    if (id) goTab(id, activeTab);
-  }
-
-  // Show period label
-  var periodoEl = document.getElementById('hdr-periodo');
-  if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 // initMesSel is called from initApp() after data is loaded
