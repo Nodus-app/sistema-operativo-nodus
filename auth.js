@@ -74,7 +74,6 @@ function initTab(id){
   else if(id==='comisiones') initComisiones();
 }
 function initApp(){
-  initMesSel();
   document.getElementById('hdr-periodo').textContent=D_PERIODO||'';
   INITED={};
   initTab('cartones');
@@ -1298,66 +1297,3 @@ function dlRejDetalle() {
   dlXLS(rows, ['Cliente','Razón Social','Dirección','Proveedor','Importe $','Motivo','App?'],
     'detalle_rechazos_'+titulo.replace(/ /g,'_'));
 }
-
-// ── SELECTOR DE MES ───────────────────────────────────────────────────────────
-var _MES_ACTUAL = '';
-
-function initMesSel() {
-  if (!window.D_HIST_LABELS || !D_HIST_LABELS.length) return;
-  var sel = document.getElementById('mes-sel');
-  if (!sel) return;
-  sel.innerHTML = '';
-  D_HIST_LABELS.forEach(function(label) {
-    var opt = document.createElement('option');
-    opt.value = label;
-    opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-    sel.appendChild(opt);
-  });
-  // Default: most recent month (last in list)
-  _MES_ACTUAL = D_HIST_LABELS[D_HIST_LABELS.length - 1];
-  sel.value = _MES_ACTUAL;
-  // Don't swap data on init - current month data is already loaded
-}
-
-function cambiarMes(label) {
-  _MES_ACTUAL = label;
-  if (!window.D_HIST || !D_HIST[label]) return;
-  var h = D_HIST[label];
-
-  // Swap ALL global data variables
-  if(h.kpis)        window.D_KPIS        = h.kpis;
-  if(h.prov)        window.D_PROV        = h.prov;
-  if(h.motivo)      window.D_MOTIVO      = h.motivo;
-  if(h.motivo_prov) window.D_MOTIVO_PROV = h.motivo_prov;
-  if(h.chofer)      window.D_CHOFER      = h.chofer;
-  if(h.chprov)      window.D_CHPROV      = h.chprov;
-  if(h.ch_det)      window.D_CH_DET      = h.ch_det;
-  if(h.venta)       window.D_VENTA       = h.venta;
-  if(h.routes)      window.D_ROUTES      = h.routes;
-  if(h.cli)         window.D_CLI         = h.cli;
-  if(h.cart)        window.D_CART        = h.cart;
-  if(h.app)         window.D_APP         = h.app;
-  if(h.conc)        window.D_CONC        = h.conc;
-  if(h.dep)         window.D_DEP         = h.dep;
-  if(h.reinc)       window.D_REINC       = h.reinc;
-  if(h.com)         window.D_COM         = h.com;
-  if(h.chs)         window.D_CHS         = h.chs;
-  if(h.provs)       window.D_PROVS       = h.provs;
-  if(h.ch_tipos)    window.D_CH_TIPOS    = h.ch_tipos;
-  if(h.periodo)     window.D_PERIODO     = h.periodo;
-
-  // Update header periodo label
-  var periodoEl = document.getElementById('hdr-periodo');
-  if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
-
-  // Reset INITED so all tabs re-render with new data
-  Object.keys(INITED).forEach(function(k){ INITED[k] = false; });
-  // Re-render active tab with new data
-  var activeBtn = document.querySelector('.tab.on');
-  if (activeBtn) {
-    var tabMatch = (activeBtn.getAttribute('onclick')||'').match(/'([^']+)'/);
-    if (tabMatch) goTab(tabMatch[1], activeBtn);
-  }
-}
-
-// initMesSel is called from initApp() after data is loaded

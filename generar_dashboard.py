@@ -13,34 +13,6 @@ print("=" * 60)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# Detect all month subfolders (e.g. "junio 2026", "julio 2026")
-# and set CURRENT_DIR to the most recent one
-def _get_month_dirs():
-    dirs = []
-    try:
-        for d in os.listdir(DATA_DIR):
-            full = os.path.join(DATA_DIR, d)
-            if os.path.isdir(full):
-                dirs.append((d, full))
-    except: pass
-    # Sort by name (month year format sorts chronologically if consistent)
-    MES_ORD = {'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,
-               'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12}
-    def _sort_key(item):
-        parts = item[0].lower().split()
-        mes = MES_ORD.get(parts[0], 0) if parts else 0
-        anio = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
-        return (anio, mes)
-    dirs.sort(key=_sort_key)
-    return dirs
-
-MONTH_DIRS = _get_month_dirs()
-# If no subfolders, fall back to DATA_DIR itself
-CURRENT_DIR = MONTH_DIRS[-1][1] if MONTH_DIRS else DATA_DIR
-CURRENT_PERIOD = MONTH_DIRS[-1][0] if MONTH_DIRS else ''
-print(f"Períodos encontrados: {[d[0] for d in MONTH_DIRS]}")
-print(f"Procesando: {CURRENT_PERIOD}")
-
 def si(v,d=0):
     try: return d if (v is None or (isinstance(v,float) and math.isnan(v))) else int(v)
     except: return d
@@ -49,16 +21,15 @@ def sf(v,d=0.0):
     try: return d if (v is None or (isinstance(v,float) and math.isnan(v))) else float(v)
     except: return d
 
-def find(name, search_dir=None):
-    sd = search_dir or CURRENT_DIR
+def find(name):
     try:
-        for f in os.listdir(sd):
+        for f in os.listdir(DATA_DIR):
             if f.lower() == name.lower():
-                return os.path.join(sd, f)
+                return os.path.join(DATA_DIR, f)
         kw = name.lower().split(".")[0]
-        for f in sorted(os.listdir(sd)):
+        for f in sorted(os.listdir(DATA_DIR)):
             if f.endswith(".xlsx") and kw in f.lower():
-                return os.path.join(sd, f)
+                return os.path.join(DATA_DIR, f)
     except: pass
     return None
 
@@ -940,243 +911,6 @@ DATA_JS = '\n'.join([
     f"var D_COM={json.dumps(com_data,ensure_ascii=True,separators=(',',':'))};",
 ])
 
-# ── HISTORIAL MULTI-MES (datos completos por mes) ────────────────────────────
-def _procesar_mes(dir_path, label):
-    """Procesa un mes completo y retorna todos los datos necesarios para el dashboard."""
-    import importlib, sys
-    try:
-        vp = find("venta_actual.xlsx", dir_path)
-        if not vp: return None
-        print(f"  Procesando historial: {label}...")
-        v = pd.read_excel(vp)
-        v['tipo_venta'] = v.get('tipo_venta', pd.Series(['Venta']*len(v))).fillna('Venta')
-        v['Importe']    = pd.to_numeric(v.get('Importe', 0), errors='coerce').fillna(0)
-        v['chofer']     = v.get('chofer', pd.Series(['']*len(v))).fillna('').astype(str).str.strip()
-        v['proveedor']  = v.get('proveedor', pd.Series(['']*len(v))).fillna('').astype(str).str.strip()
-        v['localidad']  = v.get('localidad', pd.Series(['']*len(v))).fillna('').astype(str).str.strip()
-        v['Fecha']      = pd.to_datetime(v.get('Fecha', pd.NaT), errors='coerce')
-        v['fecha_str']  = v['Fecha'].dt.strftime('%Y-%m-%d')
-        v['importe_neto'] = v['Importe']
-        v['reparto']    = pd.to_numeric(v.get('reparto', pd.Series([None]*len(v))), errors='coerce')
-        v['Razon_Social'] = v.get('Razon_Social', pd.Series(['']*len(v))).fillna('').astype(str)
-        v['Direccion']  = v.get('Direccion', pd.Series(['']*len(v))).fillna('').astype(str)
-        v['Cliente']    = v.get('Cliente', pd.Series(['']*len(v)))
-        v['motivodev']  = pd.to_numeric(v.get('motivodev', pd.Series([None]*len(v))), errors='coerce')
-        v['cod_ven']    = v.get('cod_ven', pd.Series([None]*len(v)))
-        v['Comprobante']= v.get('Comprobante', pd.Series(['']*len(v)))
-
-        # KPIs globales
-        vta  = float(v[v['tipo_venta']=='Venta']['Importe'].sum())
-        dev  = float(abs(v[v['tipo_venta']=='Devolucion']['Importe'].sum()))
-        cam  = float(abs(v[v['tipo_venta']=='Cambio']['Importe'].sum()))
-        neto = vta - dev - cam
-        bol  = v.groupby('Comprobante')['tipo_venta'].apply(list)
-        e_tot= int((bol.apply(lambda ts: any(t=='Venta' for t in ts))).sum())
-        ne_tot=int((bol.apply(lambda ts: all(t=='Devolucion' for t in ts))).sum())
-        efect= round(e_tot/(e_tot+ne_tot)*100,1) if (e_tot+ne_tot)>0 else 0
-        fechas= v['Fecha'].dropna()
-        periodo= f"{fechas.min().strftime('%d/%m')}-{fechas.max().strftime('%d/%m/%Y')}" if len(fechas) else label
-
-        rej_kpis_h = {
-            'venta_neta': round(neto,0), 'venta_bruta': round(vta,0),
-            'rechazo_imp': round(dev,0), 'cambio_imp': round(cam,0),
-            'pct_rechazo': round(dev/vta*100,2) if vta else 0,
-            'efectividad': efect, 'entregados': e_tot, 'no_entregados': ne_tot,
-        }
-
-        # Proveedores
-        def prov_met_h(df):
-            vv=float(df[df['tipo_venta']=='Venta']['Importe'].sum())
-            rr=float(abs(df[df['tipo_venta']=='Devolucion']['Importe'].sum()))
-            cc=float(abs(df[df['tipo_venta']=='Cambio']['Importe'].sum()))
-            bol2=df.groupby('Comprobante')['tipo_venta'].apply(list)
-            ee=int((bol2.apply(lambda ts:any(t=='Venta'for t in ts))).sum())
-            ne2=int((bol2.apply(lambda ts:all(t=='Devolucion'for t in ts))).sum())
-            return {'venta':round(vv,0),'rechazo':round(rr,0),'cambio':round(cc,0),
-                    'pct_rec':round(rr/vv*100,2)if vv else 0,
-                    'fac':ee,'no_e':ne2,
-                    'efect':round(ee/(ee+ne2)*100,1)if(ee+ne2)else 0}
-
-        prov_h=[]
-        for p,gp in v.groupby('proveedor'):
-            if not p: continue
-            m=prov_met_h(gp)
-            if m['venta']>0: prov_h.append({'prov':str(p),**m})
-        prov_h.sort(key=lambda x:-x['venta'])
-
-        # Venta por chofer
-        venta_h=[]
-        for ch,df_ch in v.groupby('chofer'):
-            if not ch: continue
-            bol3=df_ch.groupby('Comprobante')['tipo_venta'].apply(list)
-            e3=int((bol3.apply(lambda ts:any(t=='Venta'for t in ts))).sum())
-            ne3=int((bol3.apply(lambda ts:all(t=='Devolucion'for t in ts))).sum())
-            dev3=df_ch[df_ch['tipo_venta']=='Devolucion']
-            rp3={r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)}
-                 for _,r in dev3.groupby('proveedor').agg(n=('importe_neto','count'),imp=('importe_neto','sum')).reset_index().iterrows()}
-            ip3={r['proveedor']:{'n':int(r['n']),'imp':round(float(abs(r['imp'])),0)}
-                 for _,r in df_ch[df_ch['tipo_venta']=='Cambio'].groupby('proveedor').agg(n=('importe_neto','count'),imp=('importe_neto','sum')).reset_index().iterrows()}
-            pep3=df_ch[df_ch['proveedor']==PEPSICO]
-            pep_vta3=float(pep3[pep3['tipo_venta']=='Venta']['Importe'].sum())
-            pep_dev3=float(abs(pep3[pep3['tipo_venta']=='Devolucion']['Importe'].sum()))
-            pep_cam3=float(abs(pep3[pep3['tipo_venta']=='Cambio']['Importe'].sum()))
-            vp3={}
-            for pr,g3 in df_ch[df_ch['tipo_venta']=='Venta'].groupby('proveedor'):
-                vp3[pr]=round(float(g3['Importe'].sum()),0)
-            venta_h.append({'ch':str(ch),'e':e3,'ne':ne3,'rp':rp3,'ip':ip3,'vp':vp3,
-                'pep':{'vta':round(pep_vta3,0),'dev':round(pep_dev3,0),'cam':round(pep_cam3,0),
-                       'e':0,'ne':0,'pct_dev':round(pep_dev3/pep_vta3*100,2)if pep_vta3 else 0,
-                       'pct_cam':round(pep_cam3/pep_vta3*100,2)if pep_vta3 else 0,'efect':0}})
-
-        # Cartones
-        cart_h=[]
-        cp=find("cartones.xlsx",dir_path)
-        if cp:
-            ct=pd.read_excel(cp)
-            for _,r in ct.iterrows():
-                bs=si(r.get('cajasret',0)); bi=si(r.get('cajasretdev',0))
-                ch_c=str(r.get('razon_social','')).strip()
-                if ch_c: cart_h.append({'chofer':ch_c,'b_sal':bs,'b_ing':bi,
-                    'retorno':round(bi/bs*100,1)if bs else 0})
-
-        # Rechazos motivo y chofer
-        dev_all=v[v['tipo_venta']=='Devolucion']
-        motivo_h=[]; by_chofer_h=[]
-        for mot,gm in dev_all.groupby('motivodev'):
-            if pd.isna(mot): continue
-            motivo_h.append({'mot':MOTIVO_MAP.get(float(mot),'?'),'n':len(gm),
-                'imp':round(float(abs(gm['Importe'].sum())),0)})
-        for ch2,gc in dev_all.groupby('chofer'):
-            if not ch2: continue
-            tot2=v[v['chofer']==ch2]
-            by_chofer_h.append({'ch':str(ch2),'n':len(gc),'total':len(tot2),
-                'imp':round(float(abs(gc['Importe'].sum())),0),
-                'pct':round(len(gc)/len(tot2)*100,1) if len(tot2) else 0})
-        by_chofer_h.sort(key=lambda x:-x['imp'])
-
-        # Chofer prov map
-        chprov_h={}
-        for ch3,df3 in v.groupby('chofer'):
-            chprov_h[str(ch3).strip()]=[]
-            for p3,dp3 in df3.groupby('proveedor'):
-                vv3=float(dp3[dp3['tipo_venta']=='Venta']['Importe'].sum())
-                if vv3<=0: continue
-                rr3=float(abs(dp3[dp3['tipo_venta']=='Devolucion']['Importe'].sum()))
-                chprov_h[str(ch3).strip()].append({'prov':str(p3),'venta':round(vv3,0),'rechazo':round(rr3,0),
-                    'pct_rec':round(rr3/vv3*100,2) if vv3 else 0})
-
-        # Rutas y clientes
-        route_h=[]; cli_h={}
-        for rep_id,grp in v.groupby('reparto'):
-            if pd.isna(rep_id): continue
-            ch4=str(grp['chofer'].iloc[0]).strip()
-            fec4=str(grp['fecha_str'].iloc[0]) if 'fecha_str' in grp.columns else ''
-            cam4=int(grp.get('camion',pd.Series([0])).iloc[0]) if 'camion' in grp.columns else 0
-            locs4=', '.join(sorted(set(str(l) for l in grp['localidad'].dropna().unique()))[:3])
-            n4=grp['Cliente'].nunique()
-            tot4=round(float(grp[grp['tipo_venta']=='Venta']['Importe'].sum()),0)
-            rej4=int((grp['tipo_venta']=='Devolucion').sum())
-            route_h.append({'rep':int(rep_id),'ch':ch4,'f':fec4,'cam':cam4,
-                'loc':locs4,'n':n4,'tot':tot4,'rej':rej4,'kg':0,'pep':0,'mol':0})
-            clis4=[]
-            for _,cr in grp[['Cliente','Razon_Social','Direccion']].drop_duplicates('Cliente').iterrows():
-                clis4.append([str(cr['Cliente']),str(cr.get('Razon_Social',''))[:40],str(cr.get('Direccion',''))[:40]])
-            cli_h[str(int(rep_id))]=clis4
-        route_h.sort(key=lambda x:(x['f'],x['ch']))
-
-        # App rechazos
-        app_h=[]; conc_h={'app_ges':[],'app_only':[],'ges_only':[],'kpis':{},'rank_ch':[],'rank_vend':[]}
-        ap=find("Registro_de_Rechazos.xlsx",dir_path)
-        if ap:
-            try:
-                app_df=pd.read_excel(ap)
-                app_df['Fecha']=pd.to_datetime(app_df['Fecha'],errors='coerce')
-                app_df['fecha_str']=app_df['Fecha'].dt.strftime('%Y-%m-%d')
-                for _,ar in app_df.iterrows():
-                    app_h.append({'id':str(ar.get('ID','')),'fecha':str(ar.get('fecha_str','')),
-                        'chofer':str(ar.get('Chofer','')).strip(),
-                        'cliente':str(ar.get('CLIENTE','')) if pd.notna(ar.get('CLIENTE')) else '',
-                        'vendedor':str(ar.get('Vendedor','')),'motivo':str(ar.get('Motivo','')),
-                        'resp':str(ar.get('Respuesta Vendedor','')) if pd.notna(ar.get('Respuesta Vendedor','')) else '',
-                        'estado':str(ar.get('Estado','')),'razon':''})
-            except Exception as ea: print(f"  App rechazos hist {label}: {ea}")
-
-        # Deposito
-        dep_h={'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[],'kpis':{},'compensaciones':[]}
-        mp=find("movimientos.xlsx",dir_path)
-        if mp:
-            try:
-                mov=pd.read_excel(mp)
-                TYPE_MAP={'faltante':'faltante','sobrante':'sobrante','rotura':'roturas',
-                          'consumo':'consumo','vencido':'vencido','vencimiento':'vencido'}
-                tipo_col=next((c for c in mov.columns if 'tipo' in c.lower()),None)
-                if tipo_col:
-                    for _,mr in mov.iterrows():
-                        tp=str(mr.get(tipo_col,'')).lower().strip()
-                        cat=TYPE_MAP.get(tp)
-                        if not cat: continue
-                        dep_h[cat].append({'art':str(mr.get('descripcion',mr.get('articulo_codigo','')))[:40],
-                            'prov':'',' uds':float(mr.get('stockmov_cantidad',mr.get('cantidad',0))),
-                            'costo':0,'fecha':''})
-            except Exception as em: print(f"  Deposito hist {label}: {em}")
-
-        # Reincidentes
-        reinc_h=[]
-        try:
-            dev_cli2=dev_all.groupby('Cliente')['Comprobante'].nunique()
-            for cli5 in dev_cli2[dev_cli2>1].index:
-                df5=dev_all[dev_all['Cliente']==cli5]
-                reinc_h.append({'cid':int(cli5),'razon':str(df5['Razon_Social'].iloc[0])[:35] if 'Razon_Social' in df5.columns else '',
-                    'n':int(dev_cli2[cli5]),'imp':round(float(abs(df5['Importe'].sum())),0)})
-            reinc_h.sort(key=lambda x:-x['n'])
-        except: pass
-
-        # ch_det
-        ch_det_h={}
-        try:
-            dev_df2=v[v['tipo_venta']=='Devolucion'].copy()
-            dev_df2['cli_str']=dev_df2['Cliente'].apply(lambda vv: str(int(float(vv))) if pd.notna(vv) else '')
-            for ch6,df6 in dev_df2.groupby('chofer'):
-                det6=[]
-                for (cli6,prov6),g6 in df6.groupby(['cli_str','proveedor']):
-                    imp6=float(abs(g6['Importe'].sum()))
-                    if imp6==0: continue
-                    mv6=g6['motivodev'].iloc[0] if 'motivodev' in g6.columns and pd.notna(g6['motivodev'].iloc[0]) else None
-                    mot6=MOTIVO_MAP.get(float(mv6),'')[:30] if mv6 is not None else ''
-                    det6.append({'cli':cli6,'razon':str(g6['Razon_Social'].iloc[0])[:40] if 'Razon_Social' in g6.columns else '',
-                        'dir':str(g6['Direccion'].iloc[0])[:40] if 'Direccion' in g6.columns else '',
-                        'prov':str(prov6)[:30],'imp':round(imp6,0),'motivo':mot6,'app':0})
-                det6.sort(key=lambda x:-x['imp'])
-                if det6: ch_det_h[str(ch6).strip()]=det6
-        except: pass
-
-        return {
-            'label': label, 'periodo': periodo,
-            'kpis': rej_kpis_h, 'prov': prov_h, 'venta': venta_h,
-            'cart': cart_h, 'motivo': motivo_h, 'chofer': by_chofer_h,
-            'chprov': chprov_h, 'ch_det': ch_det_h,
-            'routes': route_h, 'cli': cli_h,
-            'app': app_h, 'conc': conc_h, 'dep': dep_h,
-            'reinc': reinc_h, 'com': {'resumen':[],'repartos':[],'periodo':periodo},
-            'chs': sorted(v['chofer'].dropna().unique().tolist()),
-            'provs': sorted(v['proveedor'].dropna().unique().tolist()),
-            'ch_tipos': {ch:CHOFER_TIPO.get(ch.strip(),CHOFER_TIPO.get(ch,'tercero')) for ch in v['chofer'].dropna().str.strip().unique()},
-        }
-    except Exception as ex:
-        import traceback; traceback.print_exc()
-        print(f"  Historial {label}: error {ex}")
-        return None
-
-hist_data = {}
-for (lbl, dpath) in MONTH_DIRS:
-    d = _procesar_mes(dpath, lbl)
-    if d: hist_data[lbl] = d
-
-hist_labels = [d[0] for d in MONTH_DIRS]
-hist_js = f"var D_HIST={json.dumps(hist_data,ensure_ascii=True,separators=(',',':'))};"
-hist_labels_js = f"var D_HIST_LABELS={json.dumps(hist_labels,ensure_ascii=True,separators=(',',':'))};"
-DATA_JS = DATA_JS + '\n' + hist_js + '\n' + hist_labels_js
-
 # ── INYECTAR ──────────────────────────────────────────────────────────────────
 dash_path = os.path.join(BASE_DIR, 'dashboard_operativo.html')
 if not os.path.exists(dash_path):
@@ -1285,7 +1019,7 @@ build_dt = _now_ar.strftime('%d/%m/%Y %H:%M')
 html = html.replace('__BUILD_TS__', build_ts)
 # Replace placeholder OR any previously hardcoded date
 import re as _re
-html = _re.sub(r'__BUILD_DT__|\d{2}/\d{2}/\d{4} \d{2}:\d{2}', build_dt, html)
+html = _re.sub(r'__BUILD_DT__|\d{2}/\d{2}/\d{4} \d{2}:\d{2}(?= *</span>)', build_dt, html)
 
 with open(dash_path,'w',encoding='utf-8') as f: f.write(html)
 print(f"\nDashboard: {os.path.getsize(dash_path)//1024}KB")
