@@ -1297,3 +1297,97 @@ function dlRejDetalle() {
   dlXLS(rows, ['Cliente','Razón Social','Dirección','Proveedor','Importe $','Motivo','App?'],
     'detalle_rechazos_'+titulo.replace(/ /g,'_'));
 }
+
+// ── SELECTOR DE MES ───────────────────────────────────────────────────────────
+var _MES_ACTUAL = '';
+
+function initMesSel() {
+  if (!window.D_HIST_LABELS || !D_HIST_LABELS.length) return;
+  var sel = document.getElementById('mes-sel');
+  if (!sel) return;
+  sel.innerHTML = '';
+  D_HIST_LABELS.forEach(function(label) {
+    var opt = document.createElement('option');
+    opt.value = label;
+    opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    sel.appendChild(opt);
+  });
+  // Default: most recent month (last in list)
+  _MES_ACTUAL = D_HIST_LABELS[D_HIST_LABELS.length - 1];
+  sel.value = _MES_ACTUAL;
+  // Don't swap data on init - current month data is already loaded
+}
+
+function cambiarMes(label) {
+  _MES_ACTUAL = label;
+  if (!window.D_HIST || !D_HIST[label]) return;
+  var h = D_HIST[label];
+
+  // Swap ALL global data variables with this month's data
+  window.D_KPIS   = h.kpis   || window.D_KPIS;
+  window.D_PROV   = h.prov   || window.D_PROV;
+  window.D_VENTA  = h.venta  || window.D_VENTA;
+  window.D_CART   = h.cart   || window.D_CART;
+  window.D_MOTIVO = h.motivo || window.D_MOTIVO;
+  window.D_CHS    = h.chs    || window.D_CHS;
+  window.D_PROVS  = h.provs  || window.D_PROVS;
+  window.D_PERIODO= h.periodo|| window.D_PERIODO;
+
+  // Update header periodo label
+  var periodoEl = document.getElementById('hdr-periodo');
+  if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+  // Update KPI cards (top bar)
+  var kpis = {
+    venta_neta:    h.venta_neta,
+    rechazo_imp:   h.devoluciones,
+    pct_rechazo:   h.pct_rechazo,
+    efectividad:   h.efectividad,
+    entregados:    h.entregados,
+    no_entregados: h.no_entregados,
+    cart_sal:      h.cart_sal,
+    cart_ret:      h.cart_ret,
+    cart_pct:      h.cart_pct,
+  };
+
+  // Update visible KPI elements if they exist
+  var F = function(n){ return Math.round(n).toLocaleString('es-AR'); };
+  var trySet = function(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  trySet('kpi-venta',    '$' + F(h.venta_neta));
+  trySet('kpi-rechazo',  '$' + F(h.devoluciones));
+  trySet('kpi-pct-rec',  h.pct_rechazo.toFixed(2) + '%');
+  trySet('kpi-efect',    h.efectividad.toFixed(1) + '%');
+  trySet('kpi-entregados', F(h.entregados));
+  trySet('kpi-noent',    F(h.no_entregados));
+  trySet('kpi-cart-sal', F(h.cart_sal));
+  trySet('kpi-cart-ret', F(h.cart_ret));
+  trySet('kpi-cart-pct', h.cart_pct.toFixed(1) + '%');
+  trySet('kpi-pep-vta',  '$' + F(h.pep_vta));
+  trySet('kpi-pep-dev',  '$' + F(h.pep_dev));
+  trySet('kpi-pep-pct',  h.pep_pct_dev.toFixed(2) + '%');
+
+  // Re-render all active tabs with current period context
+  var activeTab = document.querySelector('.tab.on');
+  if (activeTab && activeTab.onclick) {
+    var id = activeTab.getAttribute('data-tab') ||
+             (activeTab.onclick.toString().match(/'([^']+)'/) || [])[1];
+    if (id) goTab(id, activeTab);
+  }
+
+  // Show period label
+  var periodoEl = document.getElementById('hdr-periodo');
+  if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Initialize on load
+(function() {
+  var orig = window.onload;
+  window.onload = function() {
+    if (orig) orig();
+    initMesSel();
+  };
+})();
