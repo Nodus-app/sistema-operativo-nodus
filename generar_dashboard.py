@@ -11,7 +11,27 @@ print("611 Logistica - Generador Dashboard Operativo")
 print("=" * 60)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+_DATA_ROOT = os.path.join(BASE_DIR, "data")
+
+# Auto-detect most recent month subfolder
+def _find_data_dir():
+    MES_ORD = {'enero':1,'febrero':2,'marzo':3,'abril':4,'mayo':5,'junio':6,
+               'julio':7,'agosto':8,'septiembre':9,'octubre':10,'noviembre':11,'diciembre':12}
+    def _key(d):
+        parts = d.lower().split()
+        return (int(parts[1]) if len(parts)>1 and parts[1].isdigit() else 0,
+                MES_ORD.get(parts[0],0) if parts else 0)
+    try:
+        subs = [d for d in os.listdir(_DATA_ROOT)
+                if os.path.isdir(os.path.join(_DATA_ROOT, d)) and not d.startswith('.')]
+        if subs:
+            best = max(subs, key=_key)
+            print(f"Usando carpeta: {best}")
+            return os.path.join(_DATA_ROOT, best)
+    except: pass
+    return _DATA_ROOT
+
+DATA_DIR = _find_data_dir()
 
 def si(v,d=0):
     try: return d if (v is None or (isinstance(v,float) and math.isnan(v))) else int(v)
@@ -174,6 +194,24 @@ if not vc_path:
     print("ERROR: no se encontro venta_actual.xlsx"); sys.exit(1)
 
 vc = pd.read_excel(vc_path)
+# Normalizar nombres de columnas - case insensitive
+vc.columns = [c.strip() for c in vc.columns]
+col_map = {c: c for c in vc.columns}
+# Mapear variantes de nombres de columnas clave
+_KEY_COLS = {
+    'cliente':'Cliente','fecha':'Fecha','comprobante':'Comprobante',
+    'importe':'Importe','cantidad':'Cantidad','razon_social':'Razon_Social',
+    'direccion':'Direccion','tipo_venta':'tipo_venta','chofer':'chofer',
+    'proveedor':'proveedor','localidad':'localidad','reparto':'reparto',
+    'camion':'camion','motivodev':'motivodev','cod_ven':'cod_ven',
+}
+rename_map = {}
+for col in vc.columns:
+    lower = col.lower().replace(' ','_')
+    if lower in _KEY_COLS and col != _KEY_COLS[lower]:
+        rename_map[col] = _KEY_COLS[lower]
+if rename_map:
+    vc.rename(columns=rename_map, inplace=True)
 vc['Importe']    = pd.to_numeric(vc['Importe'],   errors='coerce').fillna(0)
 vc['Cantidad']   = pd.to_numeric(vc['Cantidad'],  errors='coerce').fillna(0)
 vc['tipo_venta'] = vc['tipo_venta'].fillna('Venta') if 'tipo_venta' in vc.columns else 'Venta'
