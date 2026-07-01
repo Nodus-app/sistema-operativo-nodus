@@ -1350,6 +1350,8 @@ function cambiarMes(label) {
   var periodoEl = document.getElementById('hdr-periodo');
   if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
 
+  // Reset INITED so all tabs re-render with new data
+  Object.keys(INITED).forEach(function(k){ INITED[k] = false; });
   // Re-render active tab with new data
   var activeBtn = document.querySelector('.tab.on');
   if (activeBtn) {
