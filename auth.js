@@ -1324,19 +1324,38 @@ function cambiarMes(label) {
   if (!window.D_HIST || !D_HIST[label]) return;
   var h = D_HIST[label];
 
-  // Swap ALL global data variables with this month's data
-  window.D_KPIS   = h.kpis   || window.D_KPIS;
-  window.D_PROV   = h.prov   || window.D_PROV;
-  window.D_VENTA  = h.venta  || window.D_VENTA;
-  window.D_CART   = h.cart   || window.D_CART;
-  window.D_MOTIVO = h.motivo || window.D_MOTIVO;
-  window.D_CHS    = h.chs    || window.D_CHS;
-  window.D_PROVS  = h.provs  || window.D_PROVS;
-  window.D_PERIODO= h.periodo|| window.D_PERIODO;
+  // Swap ALL global data variables
+  if(h.kpis)        window.D_KPIS        = h.kpis;
+  if(h.prov)        window.D_PROV        = h.prov;
+  if(h.motivo)      window.D_MOTIVO      = h.motivo;
+  if(h.motivo_prov) window.D_MOTIVO_PROV = h.motivo_prov;
+  if(h.chofer)      window.D_CHOFER      = h.chofer;
+  if(h.chprov)      window.D_CHPROV      = h.chprov;
+  if(h.ch_det)      window.D_CH_DET      = h.ch_det;
+  if(h.venta)       window.D_VENTA       = h.venta;
+  if(h.routes)      window.D_ROUTES      = h.routes;
+  if(h.cli)         window.D_CLI         = h.cli;
+  if(h.cart)        window.D_CART        = h.cart;
+  if(h.app)         window.D_APP         = h.app;
+  if(h.conc)        window.D_CONC        = h.conc;
+  if(h.dep)         window.D_DEP         = h.dep;
+  if(h.reinc)       window.D_REINC       = h.reinc;
+  if(h.com)         window.D_COM         = h.com;
+  if(h.chs)         window.D_CHS         = h.chs;
+  if(h.provs)       window.D_PROVS       = h.provs;
+  if(h.ch_tipos)    window.D_CH_TIPOS    = h.ch_tipos;
+  if(h.periodo)     window.D_PERIODO     = h.periodo;
 
   // Update header periodo label
   var periodoEl = document.getElementById('hdr-periodo');
   if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+  // Re-render active tab with new data
+  var activeBtn = document.querySelector('.tab.on');
+  if (activeBtn) {
+    var tabMatch = (activeBtn.getAttribute('onclick')||'').match(/'([^']+)'/);
+    if (tabMatch) goTab(tabMatch[1], activeBtn);
+  }
 
   // Update KPI cards (top bar)
   var kpis = {
