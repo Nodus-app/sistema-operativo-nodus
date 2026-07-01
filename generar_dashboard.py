@@ -1039,23 +1039,128 @@ def _procesar_mes(dir_path, label):
                 if ch_c: cart_h.append({'chofer':ch_c,'b_sal':bs,'b_ing':bi,
                     'retorno':round(bi/bs*100,1)if bs else 0})
 
-        # Rechazos motivo
+        # Rechazos motivo y chofer
         dev_all=v[v['tipo_venta']=='Devolucion']
-        motivo_h=[]
+        motivo_h=[]; by_chofer_h=[]
         for mot,gm in dev_all.groupby('motivodev'):
             if pd.isna(mot): continue
             motivo_h.append({'mot':MOTIVO_MAP.get(float(mot),'?'),'n':len(gm),
                 'imp':round(float(abs(gm['Importe'].sum())),0)})
+        for ch2,gc in dev_all.groupby('chofer'):
+            if not ch2: continue
+            tot2=v[v['chofer']==ch2]
+            by_chofer_h.append({'ch':str(ch2),'n':len(gc),'total':len(tot2),
+                'imp':round(float(abs(gc['Importe'].sum())),0),
+                'pct':round(len(gc)/len(tot2)*100,1) if len(tot2) else 0})
+        by_chofer_h.sort(key=lambda x:-x['imp'])
+
+        # Chofer prov map
+        chprov_h={}
+        for ch3,df3 in v.groupby('chofer'):
+            chprov_h[str(ch3).strip()]=[]
+            for p3,dp3 in df3.groupby('proveedor'):
+                vv3=float(dp3[dp3['tipo_venta']=='Venta']['Importe'].sum())
+                if vv3<=0: continue
+                rr3=float(abs(dp3[dp3['tipo_venta']=='Devolucion']['Importe'].sum()))
+                chprov_h[str(ch3).strip()].append({'prov':str(p3),'venta':round(vv3,0),'rechazo':round(rr3,0),
+                    'pct_rec':round(rr3/vv3*100,2) if vv3 else 0})
+
+        # Rutas y clientes
+        route_h=[]; cli_h={}
+        for rep_id,grp in v.groupby('reparto'):
+            if pd.isna(rep_id): continue
+            ch4=str(grp['chofer'].iloc[0]).strip()
+            fec4=str(grp['fecha_str'].iloc[0]) if 'fecha_str' in grp.columns else ''
+            cam4=int(grp.get('camion',pd.Series([0])).iloc[0]) if 'camion' in grp.columns else 0
+            locs4=', '.join(sorted(set(str(l) for l in grp['localidad'].dropna().unique()))[:3])
+            n4=grp['Cliente'].nunique()
+            tot4=round(float(grp[grp['tipo_venta']=='Venta']['Importe'].sum()),0)
+            rej4=int((grp['tipo_venta']=='Devolucion').sum())
+            route_h.append({'rep':int(rep_id),'ch':ch4,'f':fec4,'cam':cam4,
+                'loc':locs4,'n':n4,'tot':tot4,'rej':rej4,'kg':0,'pep':0,'mol':0})
+            clis4=[]
+            for _,cr in grp[['Cliente','Razon_Social','Direccion']].drop_duplicates('Cliente').iterrows():
+                clis4.append([str(cr['Cliente']),str(cr.get('Razon_Social',''))[:40],str(cr.get('Direccion',''))[:40]])
+            cli_h[str(int(rep_id))]=clis4
+        route_h.sort(key=lambda x:(x['f'],x['ch']))
+
+        # App rechazos
+        app_h=[]; conc_h={'app_ges':[],'app_only':[],'ges_only':[],'kpis':{},'rank_ch':[],'rank_vend':[]}
+        ap=find("Registro_de_Rechazos.xlsx",dir_path)
+        if ap:
+            try:
+                app_df=pd.read_excel(ap)
+                app_df['Fecha']=pd.to_datetime(app_df['Fecha'],errors='coerce')
+                app_df['fecha_str']=app_df['Fecha'].dt.strftime('%Y-%m-%d')
+                for _,ar in app_df.iterrows():
+                    app_h.append({'id':str(ar.get('ID','')),'fecha':str(ar.get('fecha_str','')),
+                        'chofer':str(ar.get('Chofer','')).strip(),
+                        'cliente':str(ar.get('CLIENTE','')) if pd.notna(ar.get('CLIENTE')) else '',
+                        'vendedor':str(ar.get('Vendedor','')),'motivo':str(ar.get('Motivo','')),
+                        'resp':str(ar.get('Respuesta Vendedor','')) if pd.notna(ar.get('Respuesta Vendedor','')) else '',
+                        'estado':str(ar.get('Estado','')),'razon':''})
+            except Exception as ea: print(f"  App rechazos hist {label}: {ea}")
+
+        # Deposito
+        dep_h={'faltante':[],'sobrante':[],'roturas':[],'consumo':[],'vencido':[],'kpis':{},'compensaciones':[]}
+        mp=find("movimientos.xlsx",dir_path)
+        if mp:
+            try:
+                mov=pd.read_excel(mp)
+                TYPE_MAP={'faltante':'faltante','sobrante':'sobrante','rotura':'roturas',
+                          'consumo':'consumo','vencido':'vencido','vencimiento':'vencido'}
+                tipo_col=next((c for c in mov.columns if 'tipo' in c.lower()),None)
+                if tipo_col:
+                    for _,mr in mov.iterrows():
+                        tp=str(mr.get(tipo_col,'')).lower().strip()
+                        cat=TYPE_MAP.get(tp)
+                        if not cat: continue
+                        dep_h[cat].append({'art':str(mr.get('descripcion',mr.get('articulo_codigo','')))[:40],
+                            'prov':'',' uds':float(mr.get('stockmov_cantidad',mr.get('cantidad',0))),
+                            'costo':0,'fecha':''})
+            except Exception as em: print(f"  Deposito hist {label}: {em}")
+
+        # Reincidentes
+        reinc_h=[]
+        try:
+            dev_cli2=dev_all.groupby('Cliente')['Comprobante'].nunique()
+            for cli5 in dev_cli2[dev_cli2>1].index:
+                df5=dev_all[dev_all['Cliente']==cli5]
+                reinc_h.append({'cid':int(cli5),'razon':str(df5['Razon_Social'].iloc[0])[:35] if 'Razon_Social' in df5.columns else '',
+                    'n':int(dev_cli2[cli5]),'imp':round(float(abs(df5['Importe'].sum())),0)})
+            reinc_h.sort(key=lambda x:-x['n'])
+        except: pass
+
+        # ch_det
+        ch_det_h={}
+        try:
+            dev_df2=v[v['tipo_venta']=='Devolucion'].copy()
+            dev_df2['cli_str']=dev_df2['Cliente'].apply(lambda vv: str(int(float(vv))) if pd.notna(vv) else '')
+            for ch6,df6 in dev_df2.groupby('chofer'):
+                det6=[]
+                for (cli6,prov6),g6 in df6.groupby(['cli_str','proveedor']):
+                    imp6=float(abs(g6['Importe'].sum()))
+                    if imp6==0: continue
+                    mv6=g6['motivodev'].iloc[0] if 'motivodev' in g6.columns and pd.notna(g6['motivodev'].iloc[0]) else None
+                    mot6=MOTIVO_MAP.get(float(mv6),'')[:30] if mv6 is not None else ''
+                    det6.append({'cli':cli6,'razon':str(g6['Razon_Social'].iloc[0])[:40] if 'Razon_Social' in g6.columns else '',
+                        'dir':str(g6['Direccion'].iloc[0])[:40] if 'Direccion' in g6.columns else '',
+                        'prov':str(prov6)[:30],'imp':round(imp6,0),'motivo':mot6,'app':0})
+                det6.sort(key=lambda x:-x['imp'])
+                if det6: ch_det_h[str(ch6).strip()]=det6
+        except: pass
 
         return {
             'label': label, 'periodo': periodo,
-            'kpis': rej_kpis_h,
-            'prov': prov_h,
-            'venta': venta_h,
-            'cart': cart_h,
-            'motivo': motivo_h,
+            'kpis': rej_kpis_h, 'prov': prov_h, 'venta': venta_h,
+            'cart': cart_h, 'motivo': motivo_h, 'chofer': by_chofer_h,
+            'chprov': chprov_h, 'ch_det': ch_det_h,
+            'routes': route_h, 'cli': cli_h,
+            'app': app_h, 'conc': conc_h, 'dep': dep_h,
+            'reinc': reinc_h, 'com': {'resumen':[],'repartos':[],'periodo':periodo},
             'chs': sorted(v['chofer'].dropna().unique().tolist()),
             'provs': sorted(v['proveedor'].dropna().unique().tolist()),
+            'ch_tipos': {ch:CHOFER_TIPO.get(ch.strip(),CHOFER_TIPO.get(ch,'tercero')) for ch in v['chofer'].dropna().str.strip().unique()},
         }
     except Exception as ex:
         import traceback; traceback.print_exc()
