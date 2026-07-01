@@ -74,6 +74,7 @@ function initTab(id){
   else if(id==='comisiones') initComisiones();
 }
 function initApp(){
+  initMesSel();
   document.getElementById('hdr-periodo').textContent=D_PERIODO||'';
   INITED={};
   initTab('cartones');
@@ -1383,11 +1384,4 @@ function cambiarMes(label) {
   if (periodoEl) periodoEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-// Initialize on load
-(function() {
-  var orig = window.onload;
-  window.onload = function() {
-    if (orig) orig();
-    initMesSel();
-  };
-})();
+// initMesSel is called from initApp() after data is loaded
