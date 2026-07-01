@@ -2,8 +2,13 @@ name: Actualizar Dashboard Operativo
 on:
   push:
     paths:
+      - 'data/**/*.xlsx'
+      - 'data/**/*.xls'
       - 'data/*.xlsx'
       - 'data/*.xls'
+      - 'generar_dashboard.py'
+      - 'auth.js'
+      - 'dashboard_operativo.html'
 jobs:
   build:
     runs-on: ubuntu-latest
