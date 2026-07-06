@@ -400,8 +400,8 @@ for ch, df_ch in vc.groupby('chofer'):
     pep_ch = df_ch[df_ch['proveedor'].str.strip()==PEPSICO]
     pep_bol = pep_ch.groupby('Comprobante')['tipo_venta'].apply(list).reset_index()
     pep_bol['ne'] = pep_bol['tipo_venta'].apply(lambda ts: all(t=='Devolucion' for t in ts))
-    pep_e  = int((~pep_bol['ne']).sum())
-    pep_ne = int(pep_bol['ne'].sum())
+    pep_e  = int((~pep_bol['ne']).sum()) if len(pep_bol) > 0 else 0
+    pep_ne = int(pep_bol['ne'].sum()) if len(pep_bol) > 0 else 0
     pep_vta = float(pep_ch[pep_ch['tipo_venta']=='Venta']['Importe'].sum())
     pep_dev = float(abs(pep_ch[pep_ch['tipo_venta']=='Devolucion']['Importe'].sum()))
     pep_cam = float(abs(pep_ch[pep_ch['tipo_venta']=='Cambio']['Importe'].sum()))
