@@ -518,7 +518,8 @@ if app_path:
         ges_map = {}  # (cliente, fecha_date) → dict
         for _, r in ges_dev.iterrows():
             if not pd.notna(r['Fecha']): continue
-            cli = str(r['Cliente']).strip()
+            try: cli = str(int(float(str(r['Cliente']).strip())))
+            except: cli = str(r['Cliente']).strip()
             fec = r['Fecha'].date()
             key = (cli, fec)
             if key not in ges_map:
@@ -538,7 +539,7 @@ if app_path:
 
         # ── Armar mapa APP: clave = (cliente, fecha_app) → agrupa registros del mismo día
         app_valid = app[app['CLIENTE'].notna() & (app['CLIENTE'].astype(str).str.strip()!='')].copy()
-        app_valid['cliente_str'] = app_valid['CLIENTE'].astype(str).str.strip()
+        app_valid['cliente_str'] = app_valid['CLIENTE'].apply(lambda x: str(int(float(str(x).strip()))) if str(x).strip() not in ('','nan') else '')
 
         app_map = {}
         for _, row in app_valid.iterrows():
