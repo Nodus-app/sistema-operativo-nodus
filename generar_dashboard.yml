@@ -1,0 +1,30 @@
+name: Actualizar Dashboard Operativo
+on:
+  push:
+    paths:
+      - 'data/**/*.xlsx'
+      - 'data/**/*.xls'
+      - 'data/*.xlsx'
+      - 'data/*.xls'
+      - 'generar_dashboard.py'
+      - 'auth.js'
+      - 'index.html'
+      - 'dashboard_operativo.html'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas openpyxl xlrd
+      - run: python generar_dashboard.py
+      - run: |
+          git config user.name 'GitHub Actions'
+          git config user.email 'actions@github.com'
+          git add -f index.html dashboard_operativo.html 2>/dev/null || true
+          git commit -m "Actualizar dashboard [skip ci]" || echo "Sin cambios"
+          git push

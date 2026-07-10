@@ -951,9 +951,11 @@ DATA_JS = '\n'.join([
 ])
 
 # ── INYECTAR ──────────────────────────────────────────────────────────────────
-dash_path = os.path.join(BASE_DIR, 'dashboard_operativo.html')
+dash_path = os.path.join(BASE_DIR, 'index.html')
 if not os.path.exists(dash_path):
-    print(f"ERROR: dashboard_operativo.html no encontrado"); sys.exit(1)
+    dash_path = os.path.join(BASE_DIR, 'dashboard_operativo.html')
+if not os.path.exists(dash_path):
+    print(f"ERROR: index.html / dashboard_operativo.html no encontrado"); sys.exit(1)
 
 with open(dash_path,'r',encoding='utf-8') as f: html = f.read()
 
