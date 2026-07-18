@@ -3,7 +3,7 @@
 generar_dashboard.py - 611 Logistica Dashboard Operativo
 Lee: venta_actual.xlsx, movimientos.xlsx (opcional), cartones.xlsx (opcional), Registro_de_Rechazos.xlsx (opcional)
 """
-import pandas as pd, json, os, sys, math
+import pandas as pd, json, os, sys, math, re
 from datetime import datetime
 
 print("=" * 60)
@@ -152,6 +152,15 @@ CHOFER_MAP = {
     'ROMANO RODRIGO ERNESTO':         'RODRIGO ROMANO',
     'SUAREZ TOBIAS EMIR':             'SUAREZ EMIR',
     'TALAVERA ADRIAN ISMAEL':         'TALAVERA ADRIAN',
+    # Variantes detectadas directamente en GESCOM/venta_actual (distintas a como llegan desde la App)
+    'GUZMAN DIEGO N.':                'GUZMAN DIEGO',
+    'MARTINEZ P. J. LEANDRO':         'MARTINEZ LEANDRO',
+    'MENDIZABAL FRANCO':              'MENDIZABAL FRANCO WENCESLAO',
+    # Variantes detectadas en la App (Registro_de_Rechazos.xlsx) que faltaban mapear
+    'GUIRAO LUIS ANTONIO':            'LUIS GUIRAO',
+    'JUNCOS LUIS EZEQUIEL':           'EZEQUIEL JUNCOS',
+    'NIETO GUSTAVO ATILIO':           'GUSTAVO NIETO',
+    'ROMANO MARTIN':                  'MARTIN ROMANO',
 }
 
 # Clasificacion de choferes
@@ -185,6 +194,28 @@ CHOFER_TIPO = {
     'CHOF A PRUEBA':                  'tercero',
     'CHOF A PRUE 1':                  'tercero',
 }
+
+def normalizar_chofer(nombre):
+    """
+    Unifica variantes de nombre de chofer entre GESCOM/venta_actual y la App,
+    para que CHOFER_TIPO / CHOFER_MAP / TERCEROS_LIST siempre matcheen sin
+    importar mayusculas/minusculas o si viene con inicial de segundo nombre
+    (ej: 'Guzman Diego N.' -> 'GUZMAN DIEGO').
+    Devuelve el nombre canonico en MAYUSCULAS tal como esta en CHOFER_TIPO.
+    """
+    n = str(nombre).strip().upper()
+    if n in CHOFER_MAP:
+        return CHOFER_MAP[n]
+    if n in CHOFER_TIPO:
+        return n
+    # Intenta sacar una inicial final tipo " N." o " N" (segundo nombre/apellido abreviado)
+    n2 = re.sub(r'\s+[A-ZÑ]\.?$', '', n).strip()
+    if n2 and n2 != n:
+        if n2 in CHOFER_MAP:
+            return CHOFER_MAP[n2]
+        if n2 in CHOFER_TIPO:
+            return n2
+    return n
 
 print("\nLeyendo archivos...")
 
@@ -613,9 +644,9 @@ if app_path:
         # Ranking choferes: GESCOM sin App, por cantidad desc
         ch_rank = {}
         for r in conc_data['ges_only']:
-            ch = r['chofer']
+            ch = normalizar_chofer(r['chofer'])
             if ch not in ch_rank:
-                ch_rank[ch] = {'chofer': ch, 'tipo': CHOFER_TIPO.get(ch.strip(), 'tercero'), 'n': 0, 'imp': 0}
+                ch_rank[ch] = {'chofer': ch, 'tipo': CHOFER_TIPO.get(ch, 'tercero'), 'n': 0, 'imp': 0}
             ch_rank[ch]['n'] += 1
             ch_rank[ch]['imp'] += r['imp']
         conc_data['rank_ch'] = sorted(ch_rank.values(), key=lambda x: -x['n'])
@@ -811,7 +842,7 @@ if com_path:
             std = LOC_MAP_COM.get(loc, loc)
             return loc_pct.get(std, None)
 
-        vc_ter = vc[vc['chofer'].str.strip().isin(TERCEROS_LIST)].copy()
+        vc_ter = vc[vc['chofer'].apply(normalizar_chofer).isin(TERCEROS_LIST)].copy()
         vc_ter['_signo'] = vc_ter['tipo_venta'].map({'Venta':1,'Devolucion':-1,'Cambio':-1}).fillna(1)
         vc_ter['_imp_neto'] = vc_ter['Importe'] * vc_ter['_signo']
 
@@ -941,7 +972,7 @@ DATA_JS = '\n'.join([
     f"var D_PERIODO={json.dumps(PERIODO)};",
     f"var D_PROVS={json.dumps(sorted(vc['proveedor'].dropna().str.strip().unique().tolist()),ensure_ascii=True,separators=(',',':'))};",
     f"var D_CHS={json.dumps(sorted(vc['chofer'].dropna().str.strip().unique().tolist()),ensure_ascii=True,separators=(',',':'))};",
-    f"var D_CH_TIPOS={json.dumps({ch:CHOFER_TIPO.get(ch.strip(),CHOFER_TIPO.get(ch,'tercero')) for ch in vc['chofer'].dropna().str.strip().unique()},ensure_ascii=True,separators=(',',':'))};",
+    f"var D_CH_TIPOS={json.dumps({ch:CHOFER_TIPO.get(normalizar_chofer(ch),'tercero') for ch in vc['chofer'].dropna().str.strip().unique()},ensure_ascii=True,separators=(',',':'))};",
     make_chunks('D_CART',   cart_records),
     make_chunks('D_APP',    app_records),
     conc_js,
