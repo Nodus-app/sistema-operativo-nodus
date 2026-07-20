@@ -33,6 +33,9 @@ function fmtFecha(s){
   if(s.indexOf('-')===4) return s.split('-').reverse().join('/');
   return s;
 }
+function HTMLATTR(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 
 // \u2500\u2500 LOGIN \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 var USERS={'sup':{'pass':'sup611','name':'Supervisor'}};
@@ -556,6 +559,50 @@ function initConciliacion(){
   load.style.display='none'; cont.style.display='block';
   pwaRows=window.D_APP||[];
   renderConciliacion();
+
+  // Delegacion de clicks en los rankings (se registra una sola vez)
+  if(!window._concRankClickBound){
+    window._concRankClickBound=true;
+    var rankChTbl=document.getElementById('conc-rank-ch');
+    if(rankChTbl) rankChTbl.addEventListener('click',function(e){
+      var tr=e.target.closest?e.target.closest('tr[data-chofer]'):null;
+      if(tr) verDetalleChofer(tr.getAttribute('data-chofer'));
+    });
+    var rankVTbl=document.getElementById('conc-rank-vend');
+    if(rankVTbl) rankVTbl.addEventListener('click',function(e){
+      var tr=e.target.closest?e.target.closest('tr[data-vendedor]'):null;
+      if(tr) verDetalleVendedor(tr.getAttribute('data-vendedor'));
+    });
+  }
+}
+function scrollFlash(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  el.classList.add('card-flash');
+  setTimeout(function(){el.classList.remove('card-flash');},1800);
+}
+// Clic en un chofer del ranking "sin gestión": filtra el Detalle Conciliación
+// a ese chofer y al tipo "GESCOM sin App" (que es exactamente lo que arma el ranking)
+function verDetalleChofer(nombre){
+  var fCh=document.getElementById('conc-f-ch');
+  var fTipo=document.getElementById('conc-f-tipo');
+  if(fCh) fCh.value=nombre;
+  if(fTipo) fTipo.value='go';
+  renderConciliacion();
+  scrollFlash('conc-detalle-card');
+}
+// Clic en un vendedor del ranking "sin respuesta": filtra por ese vendedor
+// y muestra el detalle de clientes sin respuesta (lo que arma el ranking)
+function verDetalleVendedor(nombre){
+  var fVend=document.getElementById('conc-f-vend');
+  var fCh=document.getElementById('conc-f-ch');
+  var fTipo=document.getElementById('conc-f-tipo');
+  if(fVend) fVend.value=nombre;
+  if(fCh) fCh.value='';
+  if(fTipo) fTipo.value='';
+  renderConciliacion();
+  scrollFlash('conc-sinresp-card');
 }
 function loadPWA(){initConciliacion();}
 
@@ -581,7 +628,7 @@ function renderConciliacion(){
     rankCh.map(function(r,i){
       var urg=r.n>5?BD('br','Urgente'):r.n>2?BD('by','Atenci\u00f3n'):BD('bp','Revisar');
       var tipo=r.tipo==='propio'?'Propio':r.tipo==='backup'?'Backup':'Tercero';
-      return '<tr><td>'+(i+1)+'</td><td><strong>'+(r.chofer||r.ch||'')+'</strong></td>'+
+      return '<tr class="rank-row-ck" data-chofer="'+HTMLATTR(r.chofer||r.ch||'')+'"><td>'+(i+1)+'</td><td><strong>'+(r.chofer||r.ch||'')+'</strong></td>'+
         '<td style="text-align:center;color:#4db6ac;font-size:.78rem">'+tipo+'</td>'+
         '<td style="text-align:right;color:#ff5252">'+r.n+'</td>'+
         '<td style="text-align:right">$'+F(r.imp)+'</td>'+
@@ -594,7 +641,7 @@ function renderConciliacion(){
     rankV.map(function(r,i){
       var pctSin=r.pct_sin_resp||0;
       var col=pctSin>70?'#ff5252':pctSin>40?'#ffab40':'#69f0ae';
-      return '<tr><td>'+(i+1)+'</td><td><strong>'+(r.vendedor||r.v||'')+'</strong></td>'+
+      return '<tr class="rank-row-ck" data-vendedor="'+HTMLATTR(r.vendedor||r.v||'')+'"><td>'+(i+1)+'</td><td><strong>'+(r.vendedor||r.v||'')+'</strong></td>'+
         '<td style="text-align:right">'+r.total+'</td>'+
         '<td style="text-align:right;color:#00e5cc">'+(r.con_resp||0)+'</td>'+
         '<td style="text-align:right;color:#ff5252">'+r.sin_resp+'</td>'+
