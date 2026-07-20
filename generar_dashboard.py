@@ -518,7 +518,7 @@ if app_path:
         app['Fecha']      = pd.to_datetime(app['Fecha'], errors='coerce')
         app['fecha_str']  = app['Fecha'].dt.strftime('%Y-%m-%d')
         app['chofer_norm']= app['Chofer'].str.strip().str.upper()
-        app['chofer_ges'] = app['chofer_norm'].map(CHOFER_MAP).fillna(app['chofer_norm'])
+        app['chofer_ges'] = app['chofer_norm'].apply(normalizar_chofer)
         for _,r in app.iterrows():
             app_records.append({
                 'id':      str(r.get('ID','')),
@@ -556,7 +556,7 @@ if app_path:
             if key not in ges_map:
                 ges_map[key] = {
                     'imp': 0, 'razon': str(r.get('Razon_Social','')).strip()[:40],
-                    'chofer': str(r['chofer']).strip(), 'fecha': str(r['fecha_str']),
+                    'chofer': normalizar_chofer(r['chofer']), 'fecha': str(r['fecha_str']),
                     'vendedor': str(r.get('vendedor','')).strip(),
                 }
             ges_map[key]['imp'] += abs(float(r['Importe']))
