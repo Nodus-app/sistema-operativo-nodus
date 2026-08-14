@@ -1,0 +1,21 @@
+name: Actualizar Stock Depósito 3D
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python fetch_stock_deposito.py
+      - run: |
+          git config user.name 'GitHub Actions'
+          git config user.email 'actions@github.com'
+          git add -f stock-deposito.json
+          git diff --cached --quiet || (git commit -m "Actualizar stock depósito 3D [skip ci]" && git push)

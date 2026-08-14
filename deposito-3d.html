@@ -634,12 +634,16 @@
         let PACKING_ACTUAL = {};
         let PALLET_INFO = {};
 
-        // Datos en vivo desde la API real de 611 Logistica (ver paso-a-paso-entorno-nuevo.md)
-        const API_URL = 'https://apineuroscien04.com/ApiGiroscop/webresources/Inventario/StockPorUbicacion01/B1,0GKa0AxvYx';
+        // La API real de 611 Logistica (apineuroscien04.com) no manda headers CORS,
+        // así que un fetch directo desde el navegador siempre queda bloqueado. Un
+        // GitHub Action (.github/workflows/actualizar_stock_deposito.yml) la
+        // consulta del lado del servidor cada 15 min y guarda el resultado acá,
+        // mismo origen que esta página — sin problema de CORS.
+        const API_URL = 'stock-deposito.json';
 
         async function cargarDatosDesdeAPI() {
             try {
-                const res = await fetch(API_URL);
+                const res = await fetch(API_URL, { cache: 'no-store' });
                 const data = await res.json();
                 const filas = (data.stockPorUbicacion || []).filter(f => f.tipoUbicacion === 'ESTIBA');
 
