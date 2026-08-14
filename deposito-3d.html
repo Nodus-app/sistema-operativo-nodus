@@ -739,10 +739,21 @@
         ----------------------------------------------------------------- */
         const CAJAS_POR_PISO_DEFAULT = 5;
         const MAX_PISOS_VISUAL = 10;
-        const BOX_LONG = 0.40, BOX_SHORT = 0.30, BOX_H = 0.22; // caja de cartón real (~40x30x22cm)
+        const BOX_LONG = 0.40, BOX_SHORT = 0.30; // pie de la caja de cartón real (~40x30cm)
         const BOXES_POR_PISO = 5; // patrón real: 3 de costado + 2 de frente por piso
         const PALLET_W = 1.2; // ancho del pallet (eje X)
+        const TARGET_PALLET_H = 1.05; // altura de carga de un pallet COMPLETO (todas las paletas llenas terminan igual de altas)
         const INST_MAX = 20000;
+
+        // La altura de la caja se deriva de "bultosxpaleta" (cajas que trae un pallet
+        // lleno): productos con menos cajas por pallet son cajas más altas, así que
+        // un pallet lleno de 25 cajas altas y uno de 40 cajas bajas terminan a la
+        // misma altura real — como en el depósito de verdad.
+        function calcularAlturaCaja(pack, cajasTotales) {
+            const bultosxpaleta = Math.max(1, (pack && pack.cajasPorPallet) || cajasTotales);
+            const pisosLleno = Math.max(1, Math.ceil(bultosxpaleta / BOXES_POR_PISO));
+            return TARGET_PALLET_H / pisosLleno;
+        }
         const PALLET_INST_MAX = 8000;
         const STRINGER_H = 0.09, DECK_H = 0.025;
         const PALLET_H = STRINGER_H + DECK_H;
@@ -861,6 +872,7 @@
 
                 const pack = PACKING_ACTUAL[code];
                 const cajasTotales = Math.max(1, (pack && pack.cajas) || CAJAS_POR_PISO_DEFAULT);
+                const boxH = calcularAlturaCaja(pack, cajasTotales);
 
                 const footprintW = 1.2;
                 const footprintD = Math.max(slot.userData.colDepth - 0.5, 0.5);
@@ -880,7 +892,7 @@
 
                 let restantes = cajasTotales;
                 for (let piso = 0; piso < pisos && restantes > 0; piso++) {
-                    const y = stackBase + BOX_H / 2 + piso * BOX_H;
+                    const y = stackBase + boxH / 2 + piso * boxH;
                     const tresAtras = (piso % 2 === 0);
                     const depthAtras = tresAtras ? dzTres : dzDos;
                     const depthAdelante = tresAtras ? dzDos : dzTres;
@@ -895,7 +907,7 @@
                             const px = slot.position.x + (c - (count - 1) / 2) * (footprintW / count);
                             _dummy.position.set(px, y, zCenter);
                             _dummy.rotation.set(0, 0, 0);
-                            _dummy.scale.set((footprintW / count) * 0.92, BOX_H * 0.9, depthZ * 0.92);
+                            _dummy.scale.set((footprintW / count) * 0.92, boxH * 0.9, depthZ * 0.92);
                             _dummy.updateMatrix();
                             if (bucket === instRojo) bucket.setMatrixAt(nRojo++, _dummy.matrix);
                             else if (bucket === instAmarillo) bucket.setMatrixAt(nAmarillo++, _dummy.matrix);
@@ -971,7 +983,8 @@
                     const packInfo = PACKING_ACTUAL[levelCode];
                     const cajasTotales = Math.max(1, (packInfo && packInfo.cajas) || CAJAS_POR_PISO_DEFAULT);
                     const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / BOXES_POR_PISO)));
-                    const stackTop = shelfTop + 0.04 + PALLET_H + pisos * BOX_H;
+                    const boxHCard = calcularAlturaCaja(packInfo, cajasTotales);
+                    const stackTop = shelfTop + 0.04 + PALLET_H + pisos * boxHCard;
                     const cardY = stackTop + 0.48; // deja el cartel entero (0.66 de alto) arriba de la punta de la pila
 
                     // Un cartel de cada lado (izquierdo y derecho), pegado sobre las
@@ -1328,10 +1341,17 @@
             ctx.textBaseline = 'middle';
             ctx.fillText(text, 80, 38);
             const tex = new THREE.CanvasTexture(canvas);
-            return new THREE.Mesh(
-                new THREE.PlaneGeometry(0.55, 0.25),
-                new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide })
-            );
+            // Dos placas espalda con espalda (en vez de un solo plano DoubleSide) para
+            // que el texto se lea bien de frente y de atrás — con DoubleSide, three.js
+            // no espeja el mapeo de UV en la cara trasera y el texto sale al revés.
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.FrontSide });
+            const geo = new THREE.PlaneGeometry(0.55, 0.25);
+            const group = new THREE.Group();
+            group.add(new THREE.Mesh(geo, mat));
+            const back = new THREE.Mesh(geo, mat);
+            back.rotation.y = Math.PI;
+            group.add(back);
+            return group;
         }
 
         function createFace() {
@@ -1371,7 +1391,7 @@
             const group = new THREE.Group();
 
             const skinMat = new THREE.MeshStandardMaterial({ color: 0xd8ae87, roughness: 0.65 });
-            const hairMat = new THREE.MeshStandardMaterial({ color: 0xd7dade, roughness: 0.9 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a3324, roughness: 0.85 });
             const shirtMat = new THREE.MeshStandardMaterial({ color: 0x36485c, roughness: 0.8 });
             const vestMat = new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.55 });
             const stripeMat = new THREE.MeshStandardMaterial({ color: 0xe9edf1, roughness: 0.35, metalness: 0.15 });
@@ -1433,7 +1453,7 @@
             hair.position.y = headR * 0.12;
             headGroup.add(hair);
 
-            const nameTag = createNameTag('Nico');
+            const nameTag = createNameTag('Waldo');
             nameTag.position.set(0, headR + 0.17, 0);
             headGroup.add(nameTag);
 
@@ -1606,7 +1626,7 @@
                 frontWheels.push(w);
             });
 
-            const sign = createSign('FL', '#f5b400');
+            const sign = createSign('208', '#f5b400');
             sign.scale.set(0.4, 0.4, 0.4);
             sign.position.set(0, 1.6, -1.15);
             group.add(sign);
