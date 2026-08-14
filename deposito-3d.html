@@ -538,7 +538,17 @@
             ctx.fillText(text, 64, 82);
 
             const tex = new THREE.CanvasTexture(canvas);
-            return new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+            // Dos placas espalda con espalda en vez de un plano DoubleSide: con
+            // DoubleSide three.js no espeja el UV de la cara trasera y el texto se
+            // lee al revés desde atrás (ver createNameTag).
+            const mat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.FrontSide });
+            const geo = new THREE.PlaneGeometry(2.0, 2.0);
+            const group = new THREE.Group();
+            group.add(new THREE.Mesh(geo, mat));
+            const back = new THREE.Mesh(geo, mat);
+            back.rotation.y = Math.PI;
+            group.add(back);
+            return group;
         }
 
         function createLocationLabel(text, colorHex) {
@@ -742,7 +752,7 @@
         const BOX_LONG = 0.40, BOX_SHORT = 0.30; // pie de la caja de cartón real (~40x30cm)
         const BOXES_POR_PISO = 5; // patrón real: 3 de costado + 2 de frente por piso
         const PALLET_W = 1.2; // ancho del pallet (eje X)
-        const TARGET_PALLET_H = 1.05; // altura de carga de un pallet COMPLETO (todas las paletas llenas terminan igual de altas)
+        const TARGET_PALLET_H = 1.885; // altura de CARGA de un pallet lleno; + base de madera (0.115) = 2.0m estándar real
         const INST_MAX = 20000;
 
         // La altura de la caja se deriva de "bultosxpaleta" (cajas que trae un pallet
