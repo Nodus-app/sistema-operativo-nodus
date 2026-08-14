@@ -470,8 +470,8 @@
             'Q_int': { x: xÑ, zStart: 50.0, modules: 4, levels: 3, color: 0x10b981, info: 'Pasillo Q (Paralelo a Y)' },
             'R_int': { x: xO, zStart: 50.0, modules: 4, levels: 3, color: 0x06b6d4, info: 'Pasillo R (Paralelo a Z)' },
 
-            'AB_A': { x: xA, zStart: -7.2, modules: 8, levels: 2, color: 0x84cc16, info: '8 Módulos de 2 NIVELES Completo (Frente a A)' },
-            'AA_H': { x: xH, zStart: -7.2, modules: 8, levels: 'escalonado', color: 0xeab308, info: 'Escalonado (Frente a H)' },
+            'AB_A': { x: xA, zStart: -7.2, modules: 8, subdivisions: 3, numStart: 1, numAsc: true, codePrefix: 'A', levels: 2, color: 0x84cc16, info: 'AB — Ubicaciones A1 a A24 (2 niveles, sigue en A25 con el rack A de atrás)' },
+            'AA_H': { x: xH, zStart: -7.2, modules: 8, subdivisions: 3, numStart: 1, numAsc: true, codePrefix: 'G', levels: 'escalonado', color: 0xeab308, info: 'AA — Ubicaciones G1 a G24 (escalonado, sigue en G25 con el rack G de atrás)' },
 
             'S': { x: xI, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a I)' },
             'T': { x: xJ, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a J)' },
@@ -984,15 +984,27 @@
                 const maxH = lvlYList[lvlYList.length - 1] + 1.2;
                 const colorHex = '#' + cfg.color.toString(16).padStart(6, '0');
 
-                if (subdivisions === 2) {
-                    // Cada módulo físico contiene 2 sub-ubicaciones (ej: módulo -> 25 y 26)
-                    const subDepth = moduleDepth / 2 - 0.35;
-                    [-moduleDepth/4, moduleDepth/4].forEach((offset, subIdx) => {
+                const codePrefix = cfg.codePrefix || zone;
+
+                if (subdivisions >= 2) {
+                    // Cada módulo físico contiene `subdivisions` sub-ubicaciones
+                    // (ej: subdivisions=2 -> módulo da 2 códigos; subdivisions=3 -> 3 códigos)
+                    const subDepth = moduleDepth / subdivisions - 0.35;
+                    const offsets = [];
+                    for (let i = 0; i < subdivisions; i++) {
+                        offsets.push(((i - (subdivisions - 1) / 2) * moduleDepth) / subdivisions);
+                    }
+                    offsets.forEach((offset, subIdx) => {
                         const subZ = groupCenter + offset;
-                        const totalPos = numModules * 2;
-                        const physIndex = (mod - 1) * 2 + subIdx;
-                        const modNum = cfg.numStart + (totalPos - 1) - physIndex;
-                        const code = `${zone}${modNum}`;
+                        const totalPos = numModules * subdivisions;
+                        const physIndex = (mod - 1) * subdivisions + subIdx;
+                        // numAsc: la numeración sube en el mismo sentido que los módulos físicos
+                        // (ej. AB/AA, A1..A24 arrancando en el módulo 1). Sin el flag, se mantiene
+                        // el comportamiento histórico: números altos en el módulo 1, descendiendo.
+                        const modNum = cfg.numAsc
+                            ? cfg.numStart + physIndex
+                            : cfg.numStart + (totalPos - 1) - physIndex;
+                        const code = `${codePrefix}${modNum}`;
                         lvlYList.forEach((lvlY, lvlIdx) => {
                             buildSlotBox(x, subZ, subDepth, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, false, container);
                         });
@@ -1003,7 +1015,7 @@
                     });
                 } else {
                     const modNum = cfg.numStart ? (cfg.numStart + mod - 1) : mod;
-                    const code = cfg.numStart ? `${zone}${modNum}` : `${zone}-MOD${mod}`;
+                    const code = cfg.numStart ? `${codePrefix}${modNum}` : `${zone}-MOD${mod}`;
                     lvlYList.forEach((lvlY, lvlIdx) => {
                         buildSlotBox(x, groupCenter, moduleDepth - 0.3, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, cfg.rotado, container);
                     });
