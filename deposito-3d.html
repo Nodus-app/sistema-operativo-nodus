@@ -739,6 +739,7 @@
         const MAX_PISOS_VISUAL = 10;
         const BOX_LONG = 0.40, BOX_SHORT = 0.30, BOX_H = 0.22; // caja de cartón real (~40x30x22cm)
         const BOXES_POR_PISO = 5; // patrón real: 3 de costado + 2 de frente por piso
+        const PALLET_W = 1.2; // ancho del pallet (eje X)
         const INST_MAX = 20000;
         const PALLET_INST_MAX = 8000;
         const STRINGER_H = 0.09, DECK_H = 0.025;
@@ -961,9 +962,27 @@
                 if (info) {
                     const vc = colorPorVencimiento(descripciones[levelCode]);
                     const colorHex = '#' + (vc !== null ? vc : cfg.color).toString(16).padStart(6, '0');
-                    const card = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
-                    card.position.set(x, shelfTop + 1.5, zCenter);
-                    container.add(card);
+
+                    // Altura real de la pila de cajas en esta ubicación, para que el
+                    // cartel quede pegado arriba de las cajas del costado en vez de
+                    // adentro/tapado por ellas.
+                    const packInfo = PACKING_ACTUAL[levelCode];
+                    const cajasTotales = Math.max(1, (packInfo && packInfo.cajas) || CAJAS_POR_PISO_DEFAULT);
+                    const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / BOXES_POR_PISO)));
+                    const stackTop = shelfTop + 0.04 + PALLET_H + pisos * BOX_H;
+                    const cardY = stackTop + 0.15;
+
+                    // Un cartel de cada lado (izquierdo y derecho), pegado sobre las
+                    // cajas y mirando hacia afuera, como una etiqueta de pallet real.
+                    const cardR = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
+                    cardR.position.set(x + PALLET_W / 2 - 0.03, cardY, zCenter);
+                    cardR.rotation.y = Math.PI / 2;
+                    container.add(cardR);
+
+                    const cardL = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
+                    cardL.position.set(x - PALLET_W / 2 + 0.03, cardY, zCenter);
+                    cardL.rotation.y = -Math.PI / 2;
+                    container.add(cardL);
                 }
             }
 
