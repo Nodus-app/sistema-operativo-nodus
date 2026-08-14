@@ -266,6 +266,8 @@
 
     <div id="walk-hint">Joystick para moverte · Arrastrá para apuntar · Pellizcá para acercar/alejar</div>
 
+    <button id="forklift-btn" style="display:none; position:absolute; bottom:78px; left:50%; transform:translateX(-50%); background:rgba(245,180,0,0.92); border:2px solid #fbbf24; color:#1c1300; border-radius:10px; padding:10px 18px; font-size:0.85rem; font-weight:800; cursor:pointer; z-index:16; box-shadow:0 4px 16px rgba(0,0,0,0.6); white-space:nowrap;">🚜 Subir a la autoelevadora</button>
+
     <div id="joystick-base">
         <div id="joystick-knob"></div>
     </div>
@@ -970,7 +972,7 @@
                     const cajasTotales = Math.max(1, (packInfo && packInfo.cajas) || CAJAS_POR_PISO_DEFAULT);
                     const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / BOXES_POR_PISO)));
                     const stackTop = shelfTop + 0.04 + PALLET_H + pisos * BOX_H;
-                    const cardY = stackTop + 0.15;
+                    const cardY = stackTop + 0.48; // deja el cartel entero (0.66 de alto) arriba de la punta de la pila
 
                     // Un cartel de cada lado (izquierdo y derecho), pegado sobre las
                     // cajas y mirando hacia afuera, como una etiqueta de pallet real.
@@ -1268,9 +1270,9 @@
         function updateWalkLookTarget() {
             lookFrameCounter++;
             if (lookFrameCounter % 3 !== 0) return; // no hace falta chequear todos los frames
-            const rotY = oldMan.rotation.y;
+            const rotY = controlled.rotation.y;
             const dir = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY));
-            const origin = new THREE.Vector3(oldMan.position.x, 1.6, oldMan.position.z);
+            const origin = new THREE.Vector3(controlled.position.x, 1.6, controlled.position.z);
             lookRaycaster.set(origin, dir);
             const hits = lookRaycaster.intersectObjects(emptySlots);
             if (hits.length) {
@@ -1517,6 +1519,150 @@
         oldMan.rotation.y = Math.PI / 2;
         scene.add(oldMan);
 
+        /* ----- Autoelevadora: Nico se puede subir y manejarla ----- */
+        function buildForklift() {
+            const group = new THREE.Group();
+
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf5b400, roughness: 0.55, metalness: 0.25 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: 0x1c1f26, roughness: 0.6, metalness: 0.3 });
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x8a8f99, roughness: 0.4, metalness: 0.7 });
+            const tireMat = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.85 });
+            const seatMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.8 });
+
+            // chasis principal
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.55, 1.85), bodyMat);
+            body.position.set(0, 0.68, -0.25);
+            body.castShadow = true; body.receiveShadow = true;
+            group.add(body);
+
+            // contrapeso trasero
+            const counter = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.5, 0.45), darkMat);
+            counter.position.set(0, 0.65, -1.15);
+            counter.castShadow = true;
+            group.add(counter);
+
+            // asiento
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.4), seatMat);
+            seat.position.set(0, 1.0, -0.35);
+            group.add(seat);
+            const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.4, 0.1), seatMat);
+            backrest.position.set(0, 1.24, -0.53);
+            group.add(backrest);
+
+            // volante
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.02, 8, 16), darkMat);
+            wheel.position.set(0, 1.05, 0.15);
+            wheel.rotation.x = Math.PI / 2.6;
+            group.add(wheel);
+
+            // techo protector (4 postes + placa)
+            [[-0.42, -0.85], [0.42, -0.85], [-0.42, 0.35], [0.42, 0.35]].forEach(([px, pz]) => {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.35, 0.05), metalMat);
+                post.position.set(px, 1.35, pz);
+                post.castShadow = true;
+                group.add(post);
+            });
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.05, 1.35), darkMat);
+            roof.position.set(0, 2.03, -0.25);
+            roof.castShadow = true;
+            group.add(roof);
+
+            // mástil delantero (2 rieles) y horquillas
+            [-0.38, 0.38].forEach(px => {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 2.1, 0.12), metalMat);
+                rail.position.set(px, 1.05, 0.78);
+                rail.castShadow = true;
+                group.add(rail);
+            });
+            const carriage = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.5, 0.08), metalMat);
+            carriage.position.set(0, 0.32, 0.8);
+            group.add(carriage);
+            [-0.28, 0.28].forEach(px => {
+                const fork = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.06, 1.1), darkMat);
+                fork.position.set(px, 0.1, 1.35);
+                fork.castShadow = true;
+                group.add(fork);
+            });
+
+            // ruedas: 2 traseras grandes (motrices) + 2 delanteras chicas (dirección)
+            const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.24, 16);
+            const rearWheels = [];
+            [-0.58, 0.58].forEach(px => {
+                const w = new THREE.Mesh(wheelGeo, tireMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(px, 0.3, -0.85);
+                w.castShadow = true;
+                group.add(w);
+                rearWheels.push(w);
+            });
+            const frontWheelGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.2, 14);
+            const frontWheels = [];
+            [-0.5, 0.5].forEach(px => {
+                const w = new THREE.Mesh(frontWheelGeo, tireMat);
+                w.rotation.z = Math.PI / 2;
+                w.position.set(px, 0.22, 0.55);
+                w.castShadow = true;
+                group.add(w);
+                frontWheels.push(w);
+            });
+
+            const sign = createSign('FL', '#f5b400');
+            sign.scale.set(0.4, 0.4, 0.4);
+            sign.position.set(0, 1.6, -1.15);
+            group.add(sign);
+
+            group.userData = { rearWheels, frontWheels };
+            return group;
+        }
+
+        const forklift = buildForklift();
+        forklift.position.set(xA - 4, 0, walkZ + 6.5);
+        forklift.rotation.y = Math.PI / 2;
+        scene.add(forklift);
+
+        let controlled = oldMan; // qué objeto maneja la cámara/joystick: Nico o la autoelevadora
+        let drivingForklift = false;
+        const FORKLIFT_APPROACH_DIST = 3.2;
+        const forkliftBtn = document.getElementById('forklift-btn');
+
+        function updateForkliftProximity() {
+            if (drivingForklift) {
+                forkliftBtn.textContent = '⬇️ Bajar de la autoelevadora';
+                forkliftBtn.style.display = 'block';
+                forkliftBtn.onclick = bajarAutoelevadora;
+                return;
+            }
+            const dist = oldMan.position.distanceTo(forklift.position);
+            if (dist <= FORKLIFT_APPROACH_DIST) {
+                forkliftBtn.textContent = '🚜 Subir a la autoelevadora';
+                forkliftBtn.style.display = 'block';
+                forkliftBtn.onclick = subirAutoelevadora;
+            } else {
+                forkliftBtn.style.display = 'none';
+            }
+        }
+
+        function subirAutoelevadora() {
+            drivingForklift = true;
+            oldMan.visible = false;
+            controlled = forklift;
+            camYaw = forklift.rotation.y;
+            updateChaseCamera();
+            updateForkliftProximity();
+        }
+
+        function bajarAutoelevadora() {
+            drivingForklift = false;
+            const forward = new THREE.Vector3(Math.sin(forklift.rotation.y), 0, Math.cos(forklift.rotation.y));
+            oldMan.position.set(forklift.position.x - forward.x * 1.6, 0, forklift.position.z - forward.z * 1.6);
+            oldMan.rotation.y = forklift.rotation.y;
+            oldMan.visible = true;
+            controlled = oldMan;
+            camYaw = oldMan.rotation.y;
+            updateChaseCamera();
+            updateForkliftProximity();
+        }
+
         // Ciclo de marcha: cadera+rodilla de cada pierna en fase opuesta, con la
         // rodilla flexionando solo durante el balanceo (nunca hacia atrás).
         // El brazo derecho queda fijo sosteniendo el teléfono; solo el izquierdo
@@ -1632,7 +1778,8 @@
                 Math.sin(camPitch),
                 Math.cos(camYaw) * Math.cos(camPitch)
             );
-            const eye = new THREE.Vector3(oldMan.position.x, oldMan.position.y + oldMan.userData.headY, oldMan.position.z);
+            const eyeH = drivingForklift ? 1.5 : controlled.userData.headY;
+            const eye = new THREE.Vector3(controlled.position.x, controlled.position.y + eyeH, controlled.position.z);
             camera.position.copy(eye).addScaledVector(forward, -camDist);
             camera.position.y += 0.9;
             const lookTarget = eye.clone().addScaledVector(forward, 4);
@@ -1771,14 +1918,16 @@
                 btn.textContent = '🛰️ Cámara Libre';
                 hint.style.display = 'block';
                 joystick.style.display = 'block';
-                camYaw = oldMan.rotation.y;
+                camYaw = controlled.rotation.y;
                 camPitch = 0.15;
                 controls.enabled = false;
                 updateChaseCamera();
             } else {
+                if (drivingForklift) bajarAutoelevadora();
                 btn.textContent = '🚶 Modo Caminar';
                 hint.style.display = 'none';
                 joystick.style.display = 'none';
+                forkliftBtn.style.display = 'none';
                 Object.keys(keysPressed).forEach(k => keysPressed[k] = false);
                 joystickX = 0;
                 joystickY = 0;
@@ -1865,27 +2014,35 @@
                 moveScale = Math.min(joyMag, 1);
             }
 
-            // el personaje siempre encara hacia donde apunta la cámara, se mueva o no
+            // el que esté controlado (Nico o la autoelevadora) siempre encara hacia
+            // donde apunta la cámara, se mueva o no
             const forward = getViewForwardFlat();
-            oldMan.rotation.y = Math.atan2(forward.x, forward.z);
+            controlled.rotation.y = Math.atan2(forward.x, forward.z);
 
             if (ix !== 0 || iz !== 0) {
                 const len = Math.hypot(ix, iz);
                 const nix = ix / len, niz = iz / len;
                 const right = new THREE.Vector3(forward.z, 0, -forward.x);
-                const speed = 0.24 * moveScale;
+                const speed = (drivingForklift ? 0.34 : 0.24) * moveScale;
 
                 const moveX = (forward.x * -niz + right.x * nix) * speed;
                 const moveZ = (forward.z * -niz + right.z * nix) * speed;
 
-                oldMan.position.x = Math.max(-200, Math.min(205, oldMan.position.x + moveX));
-                oldMan.position.z = Math.max(-140, Math.min(140, oldMan.position.z + moveZ));
+                controlled.position.x = Math.max(-200, Math.min(205, controlled.position.x + moveX));
+                controlled.position.z = Math.max(-140, Math.min(140, controlled.position.z + moveZ));
 
-                animateWalkCycle(performance.now() * 0.012);
-            } else {
+                if (drivingForklift) {
+                    const wheelSpin = speed * 6.5;
+                    forklift.userData.rearWheels.forEach(w => w.rotation.x += wheelSpin);
+                    forklift.userData.frontWheels.forEach(w => w.rotation.x += wheelSpin);
+                } else {
+                    animateWalkCycle(performance.now() * 0.012);
+                }
+            } else if (!drivingForklift) {
                 resetWalkCycle();
             }
 
+            if (!drivingForklift) updateForkliftProximity();
             updateChaseCamera();
         }
 
