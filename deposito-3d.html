@@ -1001,12 +1001,12 @@
                     // Un cartel de cada lado (izquierdo y derecho), pegado sobre las
                     // cajas y mirando hacia afuera, como una etiqueta de pallet real.
                     const cardR = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
-                    cardR.position.set(x + PALLET_W / 2 - 0.03, cardY, zCenter);
+                    cardR.position.set(x + PALLET_W / 2 + 0.06, cardY, zCenter);
                     cardR.rotation.y = Math.PI / 2;
                     container.add(cardR);
 
                     const cardL = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
-                    cardL.position.set(x - PALLET_W / 2 + 0.03, cardY, zCenter);
+                    cardL.position.set(x - PALLET_W / 2 - 0.06, cardY, zCenter);
                     cardL.rotation.y = -Math.PI / 2;
                     container.add(cardL);
                 }
