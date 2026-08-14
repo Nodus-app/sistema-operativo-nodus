@@ -507,7 +507,7 @@
                 x: cfg.x,
                 zStart: cfg.zStart,
                 modules: cfg.modulos,
-                levels: 3,
+                levels: 2,
                 color: cfg.color,
                 rotado: cfg.rotado || false,
                 info: 'Cancha de picking - columna ' + col + ' (' + cfg.modulos + ' rack)' + (cfg.rotado ? ' (de costado)' : '')
@@ -1050,7 +1050,7 @@
                 }
 
                 let lvlYList = [0.1, 2.6, 5.1];
-                if (numLevels === 2) lvlYList = [0.1, 2.8];
+                if (numLevels === 2) lvlYList = zone.indexOf('PICK_') === 0 ? [0.1, 1.5] : [0.1, 2.8];
                 if (numLevels === 4) lvlYList = [0.1, 1.6, 3.1, 4.6];
 
                 buildModuleFrame(x, groupCenter, moduleDepth, cfg, lvlYList, subdivisions, cfg.rotado, container);
@@ -1795,7 +1795,7 @@
 
         let camYaw = 0, camPitch = 0.15;
         let camDist = 6.5;
-        const CAM_DIST_MIN = 2.5;
+        const CAM_DIST_MIN = 1.0;
         const CAM_DIST_MAX = 14;
         const LOOK_SENSITIVITY = 0.0045;
 
@@ -1981,6 +1981,15 @@
             const pts = Array.from(activeTouches.values());
             return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         }
+
+        // Rueda del mouse: acercar/alejar en Modo Caminar (equivalente de escritorio
+        // al pellizco táctil) — para poder ver de cerca, por ejemplo, un pallet del
+        // tercer nivel sin tener que caminar hasta ahí.
+        renderer.domElement.addEventListener('wheel', (e) => {
+            if (!walkMode) return;
+            e.preventDefault();
+            camDist = Math.max(CAM_DIST_MIN, Math.min(CAM_DIST_MAX, camDist + e.deltaY * 0.01));
+        }, { passive: false });
 
         renderer.domElement.addEventListener('pointerdown', (e) => {
             if (!walkMode) return;
