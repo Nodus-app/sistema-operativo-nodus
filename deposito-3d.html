@@ -994,8 +994,9 @@
                     const cajasTotales = Math.max(1, (packInfo && packInfo.cajas) || CAJAS_POR_PISO_DEFAULT);
                     const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / BOXES_POR_PISO)));
                     const boxHCard = calcularAlturaCaja(packInfo, cajasTotales);
-                    const stackTop = shelfTop + 0.04 + PALLET_H + pisos * boxHCard;
-                    const cardY = stackTop + 0.48; // deja el cartel entero (0.66 de alto) arriba de la punta de la pila
+                    const stackBase = shelfTop + 0.04 + PALLET_H;
+                    const stackTop = stackBase + pisos * boxHCard;
+                    const cardY = (stackBase + stackTop) / 2; // centrado a la mitad de la altura del pallet
 
                     // Un cartel de cada lado (izquierdo y derecho), pegado sobre las
                     // cajas y mirando hacia afuera, como una etiqueta de pallet real.
