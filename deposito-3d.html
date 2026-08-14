@@ -735,19 +735,55 @@
         const MAX_PISOS_VISUAL = 10;
         const STACK_HEIGHT_BUDGET = 1.0;
         const INST_MAX = 20000;
+        const PALLET_INST_MAX = 8000;
+        const STRINGER_H = 0.09, DECK_H = 0.025;
+        const PALLET_H = STRINGER_H + DECK_H;
 
-        let instRojo, instAmarillo, instVerde;
+        let instRojo, instAmarillo, instVerde, instStringer, instDeck;
         const cajaGeo = new THREE.BoxGeometry(1, 1, 1);
         const _dummy = new THREE.Object3D();
 
+        // Textura de caja de cartón: línea de solapa superior + costura central,
+        // se repite en las 6 caras del BoxGeometry (misma UV 0-1 en cada instancia).
+        function createBoxTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, 14); ctx.lineTo(128, 14); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(64, 0); ctx.lineTo(64, 128); ctx.stroke();
+            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+            ctx.beginPath(); ctx.moveTo(0, 128 - 10); ctx.lineTo(128, 128 - 10); ctx.stroke();
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
         function initInstancedBoxes() {
-            const matRojo = new THREE.MeshStandardMaterial({ color: COLOR_ROJO, roughness: 0.55 });
-            const matAmarillo = new THREE.MeshStandardMaterial({ color: COLOR_AMARILLO, roughness: 0.55 });
-            const matVerde = new THREE.MeshStandardMaterial({ color: COLOR_VERDE, roughness: 0.55 });
+            const boxTex = createBoxTexture();
+            const matRojo = new THREE.MeshStandardMaterial({ color: COLOR_ROJO, roughness: 0.6, map: boxTex });
+            const matAmarillo = new THREE.MeshStandardMaterial({ color: COLOR_AMARILLO, roughness: 0.6, map: boxTex });
+            const matVerde = new THREE.MeshStandardMaterial({ color: COLOR_VERDE, roughness: 0.6, map: boxTex });
             instRojo = new THREE.InstancedMesh(cajaGeo, matRojo, INST_MAX);
             instAmarillo = new THREE.InstancedMesh(cajaGeo, matAmarillo, INST_MAX);
             instVerde = new THREE.InstancedMesh(cajaGeo, matVerde, INST_MAX);
             [instRojo, instAmarillo, instVerde].forEach(inst => {
+                inst.count = 0;
+                inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                inst.castShadow = true;
+                inst.receiveShadow = true;
+                scene.add(inst);
+            });
+
+            // Base de pallet de madera (largueros + tablas cruzadas), debajo de cada pila de cajas
+            const stringerMat = new THREE.MeshStandardMaterial({ color: 0x7c5a34, roughness: 0.92 });
+            const deckMat = new THREE.MeshStandardMaterial({ color: 0xa9814f, roughness: 0.88 });
+            instStringer = new THREE.InstancedMesh(cajaGeo, stringerMat, PALLET_INST_MAX);
+            instDeck = new THREE.InstancedMesh(cajaGeo, deckMat, PALLET_INST_MAX);
+            [instStringer, instDeck].forEach(inst => {
                 inst.count = 0;
                 inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
                 inst.castShadow = true;
@@ -762,9 +798,36 @@
             return instVerde;
         }
 
+        function placePalletBase(px, pz, footprintW, footprintD, baseY, nStringer, nDeck) {
+            // 3 largueros (corren en Z), apoyados sobre el estante
+            const stringerLen = footprintD * 0.92;
+            const stringerThick = 0.10;
+            [-0.34, 0, 0.34].forEach(fracX => {
+                _dummy.position.set(px + fracX * footprintW, baseY + STRINGER_H / 2, pz);
+                _dummy.rotation.set(0, 0, 0);
+                _dummy.scale.set(stringerThick, STRINGER_H, stringerLen);
+                _dummy.updateMatrix();
+                instStringer.setMatrixAt(nStringer.n++, _dummy.matrix);
+            });
+            // 5 tablas de cubierta (corren en X, cruzadas sobre los largueros)
+            const deckLen = footprintW * 0.94;
+            const deckSpan = footprintD * 0.85;
+            const deckCount = 5;
+            const deckThick = (deckSpan / deckCount) * 0.72;
+            for (let i = 0; i < deckCount; i++) {
+                const fracZ = (i - (deckCount - 1) / 2) / (deckCount - 1);
+                _dummy.position.set(px, baseY + STRINGER_H + DECK_H / 2, pz + fracZ * deckSpan);
+                _dummy.rotation.set(0, 0, 0);
+                _dummy.scale.set(deckLen, DECK_H, deckThick);
+                _dummy.updateMatrix();
+                instDeck.setMatrixAt(nDeck.n++, _dummy.matrix);
+            }
+        }
+
         function rebuildAllPalletBoxes() {
             if (!instRojo) return;
             let nRojo = 0, nAmarillo = 0, nVerde = 0;
+            const nStringer = { n: 0 }, nDeck = { n: 0 };
 
             emptySlots.forEach(slot => {
                 const code = slot.userData.ubicacion;
@@ -788,9 +851,14 @@
                 const boxW = (footprintW / cols) * 0.86;
                 const boxD = (footprintD / rows) * 0.86;
 
+                if (nStringer.n + 3 <= PALLET_INST_MAX && nDeck.n + 5 <= PALLET_INST_MAX) {
+                    placePalletBase(slot.position.x, slot.position.z, footprintW, footprintD, slot.userData.shelfTop + 0.04, nStringer, nDeck);
+                }
+                const stackBase = slot.userData.shelfTop + 0.04 + PALLET_H;
+
                 let restantes = cajasTotales;
                 for (let piso = 0; piso < pisos && restantes > 0; piso++) {
-                    const y = slot.userData.shelfTop + 0.05 + boxH / 2 + piso * boxH;
+                    const y = stackBase + boxH / 2 + piso * boxH;
                     for (let r = 0; r < rows && restantes > 0; r++) {
                         for (let c = 0; c < cols && restantes > 0; c++) {
                             restantes--;
@@ -814,6 +882,11 @@
             instRojo.instanceMatrix.needsUpdate = true;
             instAmarillo.instanceMatrix.needsUpdate = true;
             instVerde.instanceMatrix.needsUpdate = true;
+
+            instStringer.count = nStringer.n;
+            instDeck.count = nDeck.n;
+            instStringer.instanceMatrix.needsUpdate = true;
+            instDeck.instanceMatrix.needsUpdate = true;
         }
 
         function buildSlotBox(x, zCenter, subDepth, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, rotado, container) {
