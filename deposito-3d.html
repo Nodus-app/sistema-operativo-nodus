@@ -737,7 +737,8 @@
         ----------------------------------------------------------------- */
         const CAJAS_POR_PISO_DEFAULT = 5;
         const MAX_PISOS_VISUAL = 10;
-        const BOX_W = 0.35, BOX_D = 0.28, BOX_H = 0.22; // caja de cartón real (~35x28x22cm)
+        const BOX_LONG = 0.40, BOX_SHORT = 0.30, BOX_H = 0.22; // caja de cartón real (~40x30x22cm)
+        const BOXES_POR_PISO = 5; // patrón real: 3 de costado + 2 de frente por piso
         const INST_MAX = 20000;
         const PALLET_INST_MAX = 8000;
         const STRINGER_H = 0.09, DECK_H = 0.025;
@@ -860,37 +861,46 @@
 
                 const footprintW = 1.2;
                 const footprintD = Math.max(slot.userData.colDepth - 0.5, 0.5);
-                // Tamaño real de un cartón de picking (~35x28x22cm) — la cantidad de
-                // cajas define cuántas entran por capa y cuántas capas hacen falta,
-                // igual que se estibarían de verdad, en vez de deformar la caja para
-                // que "cajasPorPiso" siempre entre en una sola fila.
-                const cols = Math.max(1, Math.floor(footprintW / BOX_W));
-                const rows = Math.max(1, Math.floor(footprintD / BOX_D));
-                const porCapa = cols * rows;
-                const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / porCapa)));
 
                 if (nStringer.n + 3 <= PALLET_INST_MAX && nDeck.n + 5 <= PALLET_INST_MAX) {
                     placePalletBase(slot.position.x, slot.position.z, footprintW, footprintD, slot.userData.shelfTop + 0.04, nStringer, nDeck);
                 }
                 const stackBase = slot.userData.shelfTop + 0.04 + PALLET_H;
 
+                // Patrón real de estiba: 5 cajas por piso — una fila de 3 "de costado"
+                // (caja larga a lo ancho del pallet) y una fila de 2 "de frente" (caja
+                // rotada 90°, larga a lo profundo). Cada piso alterna cuál fila queda
+                // atrás/adelante, para trabar la pila como un aparejo de ladrillos.
+                const dzTres = footprintD * (BOX_SHORT / (BOX_SHORT + BOX_LONG));
+                const dzDos = footprintD - dzTres;
+                const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / BOXES_POR_PISO)));
+
                 let restantes = cajasTotales;
                 for (let piso = 0; piso < pisos && restantes > 0; piso++) {
                     const y = stackBase + BOX_H / 2 + piso * BOX_H;
-                    for (let r = 0; r < rows && restantes > 0; r++) {
-                        for (let c = 0; c < cols && restantes > 0; c++) {
+                    const tresAtras = (piso % 2 === 0);
+                    const depthAtras = tresAtras ? dzTres : dzDos;
+                    const depthAdelante = tresAtras ? dzDos : dzTres;
+                    const countAtras = tresAtras ? 3 : 2;
+                    const countAdelante = tresAtras ? 2 : 3;
+                    const zAtras = slot.position.z - footprintD / 2 + depthAtras / 2;
+                    const zAdelante = slot.position.z + footprintD / 2 - depthAdelante / 2;
+
+                    const colocarFila = (count, zCenter, depthZ) => {
+                        for (let c = 0; c < count && restantes > 0; c++) {
                             restantes--;
-                            const px = slot.position.x + (c - (cols - 1) / 2) * BOX_W;
-                            const pz = slot.position.z + (r - (rows - 1) / 2) * BOX_D;
-                            _dummy.position.set(px, y, pz);
+                            const px = slot.position.x + (c - (count - 1) / 2) * (footprintW / count);
+                            _dummy.position.set(px, y, zCenter);
                             _dummy.rotation.set(0, 0, 0);
-                            _dummy.scale.set(BOX_W * 0.92, BOX_H * 0.9, BOX_D * 0.92);
+                            _dummy.scale.set((footprintW / count) * 0.92, BOX_H * 0.9, depthZ * 0.92);
                             _dummy.updateMatrix();
                             if (bucket === instRojo) bucket.setMatrixAt(nRojo++, _dummy.matrix);
                             else if (bucket === instAmarillo) bucket.setMatrixAt(nAmarillo++, _dummy.matrix);
                             else bucket.setMatrixAt(nVerde++, _dummy.matrix);
                         }
-                    }
+                    };
+                    colocarFila(countAtras, zAtras, depthAtras);
+                    colocarFila(countAdelante, zAdelante, depthAdelante);
                 }
             });
 
