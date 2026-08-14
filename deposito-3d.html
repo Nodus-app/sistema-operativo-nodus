@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Layout PepsiCo 3D - Panel Colapsable</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; background-color: #0b0f19; color: #fff; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; position: relative; }
+        
+        #ui-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.94);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+            z-index: 10;
+            max-width: 380px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        h2 { font-size: 0.9rem; color: #38bdf8; display: flex; align-items: center; gap: 6px; }
+        .toggle-icon { font-size: 0.8rem; background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform 0.3s; }
+
+        #panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 36vh;
+            overflow-y: auto;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsed #panel-content {
+            display: none;
+        }
+
+        .collapsed .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .subtitle { font-size: 0.70rem; color: #94a3b8; }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 0.68rem;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .color-box { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+        .btn-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+
+        .btn {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            padding: 4px 6px;
+            border-radius: 5px;
+            font-size: 0.68rem;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .btn:active { background: #38bdf8; color: #0f172a; }
+        .btn-panal { border-color: #a855f7; color: #c084fc; background: rgba(168, 85, 247, 0.2); }
+        .btn-escalon { border-color: #eab308; color: #fef08a; background: rgba(234, 179, 8, 0.2); }
+        .btn-2n { border-color: #84cc16; color: #bef264; background: rgba(132, 204, 22, 0.2); }
+
+        #select-ubicacion {
+            width: 100%;
+            padding: 5px 6px;
+            border-radius: 5px;
+            border: 1px solid #38bdf8;
+            background: #0f172a;
+            color: #fff;
+            font-size: 0.74rem;
+        }
+
+        #right-detail-panel {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #38bdf8;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            color: #fff;
+            max-width: 400px;
+        }
+
+        .close-panel-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.78rem;
+        }
+        .detail-label { color: #94a3b8; font-weight: 500; }
+        .detail-value { color: #fff; font-weight: 600; text-align: right; }
+
+        #r-desc {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.78rem;
+            padding: 6px 8px;
+            resize: vertical;
+            margin-top: 4px;
+        }
+        #r-desc:focus { border-color: #38bdf8; outline: none; }
+        .save-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+        .btn-save { border-color: #4ade80; color: #4ade80; background: rgba(74, 222, 128, 0.15); }
+        #r-save-status { font-size: 0.68rem; color: #94a3b8; opacity: 0; transition: opacity 0.3s ease; }
+        .clear-link { cursor: pointer; text-align: center; margin-top: 2px; }
+        .clear-link:hover { color: #ef4444; }
+
+        #walk-hint {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #4ade80;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 0.74rem;
+            color: #bbf7d0;
+            display: none;
+            z-index: 15;
+            white-space: nowrap;
+        }
+
+        #joystick-base {
+            position: absolute;
+            left: 26px;
+            bottom: 26px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.55);
+            border: 2px solid rgba(74, 222, 128, 0.5);
+            display: none;
+            z-index: 25;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #joystick-knob {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 52px;
+            height: 52px;
+            margin-left: -26px;
+            margin-top: -26px;
+            border-radius: 50%;
+            background: rgba(74, 222, 128, 0.85);
+            border: 2px solid #bbf7d0;
+            pointer-events: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-panel">
+        <div class="panel-header" onclick="togglePanel()">
+            <h2>🏭 Depósito PepsiCo 3D <span class="subtitle" style="font-weight:normal; margin-left:6px;">(Clic para ocultar/mostrar)</span></h2>
+            <div class="toggle-icon" id="toggle-btn">▲</div>
+        </div>
+        <div id="panel-content">
+            <div class="legend">
+                <div class="legend-item"><span class="color-box" style="background: #3b82f6;"></span> Bloques (0.5m) / Pasillos (4m)</div>
+                <div class="legend-item"><span class="color-box" style="background: #a855f7;"></span> Rack P (4 Niveles)</div>
+                <div class="legend-item"><span class="color-box" style="background: #eab308;"></span> Escalonado</div>
+                <div class="legend-item"><span class="color-box" style="background: #84cc16;"></span> AB (2N)</div>
+            </div>
+
+            <div class="legend" style="margin-top:4px;">
+                <div class="legend-item"><span class="color-box" style="background:#ef4444;"></span> Vencimiento próximo (&le;60 días)</div>
+                <div class="legend-item"><span class="color-box" style="background:#eab308;"></span> Vencimiento moderado</div>
+                <div class="legend-item"><span class="color-box" style="background:#22c55e;"></span> Vencimiento lejano</div>
+            </div>
+
+            <div class="legend" style="margin-top:4px;">
+                <div class="legend-item"><span class="color-box" style="background:#22d3ee;"></span> Cancha Picking 1</div>
+                <div class="legend-item"><span class="color-box" style="background:#d946ef;"></span> Cancha Picking 2</div>
+            </div>
+
+            <select id="select-ubicacion" onchange="onSelectUbicacion(this.value)">
+                <option value="">-- Seleccionar ubicación (Módulo / Nivel) --</option>
+            </select>
+
+            <div class="btn-grid">
+                <button class="btn" onclick="focusRack('A')">A-B</button>
+                <button class="btn" onclick="focusRack('C')">C-D</button>
+                <button class="btn" onclick="focusRack('E')">E-F</button>
+                <button class="btn" onclick="focusRack('G')">G-H</button>
+                <button class="btn" onclick="focusRack('I')">I-J</button>
+                <button class="btn" onclick="focusRack('K')">K-L</button>
+                <button class="btn" onclick="focusRack('M')">M-N</button>
+                <button class="btn" onclick="focusRack('Ñ')">Ñ-O</button>
+                <button class="btn btn-panal" onclick="focusRack('P')">P (Pañales)</button>
+                <button class="btn btn-2n" onclick="focusRack('AB_A')">AB</button>
+                <button class="btn btn-escalon" onclick="focusRack('AA_H')">AA</button>
+                <button class="btn" onclick="focusRack('S')">S-T</button>
+                <button class="btn" onclick="focusRack('U')">U-V</button>
+                <button class="btn" onclick="focusRack('W')">W-X</button>
+                <button class="btn" onclick="focusRack('Y')">Y-Z</button>
+                <button class="btn" style="border-color:#22d3ee; color:#22d3ee; background:rgba(34,211,238,0.15);" onclick="focusRack('PICK_D')">Cancha 1</button>
+                <button class="btn" style="border-color:#d946ef; color:#d946ef; background:rgba(217,70,239,0.15);" onclick="focusRack('PICK_K')">Cancha 2</button>
+                <button class="btn" onclick="resetCamera()" style="border-color:#38bdf8; color:#38bdf8; flex-grow: 1;">Ver Todo 3D</button>
+                <button class="btn" id="walk-toggle-btn" onclick="toggleWalkMode()" style="border-color:#22c55e; color:#4ade80; background:rgba(34,197,94,0.18); flex-grow: 1;">🚶 Modo Caminar</button>
+                <button class="btn" id="edit-toggle-btn" onclick="toggleEditMode()" style="border-color:#f59e0b; color:#fbbf24; background:rgba(245,158,11,0.15); flex-grow: 1;">✏️ Editar Cancha</button>
+            </div>
+            <div class="subtitle clear-link" onclick="vaciarTodasDescripciones()">Restaurar datos originales del Excel</div>
+        </div>
+    </div>
+
+    <div id="walk-hint">Joystick para moverte · Arrastrá para apuntar · Pellizcá para acercar/alejar</div>
+
+    <div id="joystick-base">
+        <div id="joystick-knob"></div>
+    </div>
+
+    <div id="editor-panel" style="position:absolute; top:10px; right:10px; width:280px; max-height:92vh; overflow-y:auto; background:rgba(15,23,42,0.95); border:1px solid #f59e0b; border-radius:12px; padding:12px; box-shadow:0 8px 25px rgba(0,0,0,0.8); z-index:30; display:none; color:#fff;">
+        <h3 style="color:#fbbf24; font-size:0.9rem; border-bottom:1px solid #334155; padding-bottom:4px; margin-bottom:8px;">✏️ Editar cancha de picking</h3>
+        <p style="font-size:0.72rem; color:#94a3b8; margin-bottom:8px;">Hacé clic en un rack de la cancha (naranja o rosa) para seleccionarlo.</p>
+        <div style="font-size:0.8rem; margin-bottom:8px;">Seleccionado: <b id="editor-selected" style="color:#fbbf24;">ninguno</b></div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:8px;">
+            <div></div>
+            <button class="btn" onclick="nudgePick(0,-1)" style="border-color:#f59e0b;color:#fbbf24;">⬆ fondo</button>
+            <div></div>
+            <button class="btn" onclick="nudgePick(-1,0)" style="border-color:#f59e0b;color:#fbbf24;">⬅ izq.</button>
+            <button class="btn" onclick="resetPick()" style="border-color:#ef4444;color:#f87171;">reset</button>
+            <button class="btn" onclick="nudgePick(1,0)" style="border-color:#f59e0b;color:#fbbf24;">der. ➡</button>
+            <div></div>
+            <button class="btn" onclick="nudgePick(0,1)" style="border-color:#f59e0b;color:#fbbf24;">⬇ entrada</button>
+            <div></div>
+        </div>
+        <button class="btn btn-save" style="width:100%; margin-bottom:8px;" onclick="guardarEstructuraCancha()">💾 Guardar estructura</button>
+        <button class="btn" style="width:100%; margin-bottom:10px; border-color:#ef4444; color:#f87171;" onclick="borrarRackSeleccionado()">🗑️ Borrar rack seleccionado</button>
+
+        <div style="border-top:1px solid #334155; padding-top:8px; margin-bottom:8px;">
+            <div style="font-size:0.8rem; font-weight:600; color:#fbbf24; margin-bottom:6px;">➕ Crear rack nuevo</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                <label style="font-size:0.68rem; color:#94a3b8;">X<input id="new-x" type="number" value="-100" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; padding:3px;"></label>
+                <label style="font-size:0.68rem; color:#94a3b8;">Z inicial<input id="new-z" type="number" value="0" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; padding:3px;"></label>
+                <label style="font-size:0.68rem; color:#94a3b8;">Módulos<input id="new-modulos" type="number" value="2" min="1" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; padding:3px;"></label>
+                <label style="font-size:0.68rem; color:#94a3b8;">Niveles
+                    <select id="new-niveles" style="width:100%; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; padding:3px;">
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                        <option value="4">4</option>
+                    </select>
+                </label>
+                <label style="font-size:0.68rem; color:#94a3b8;">Color<input id="new-color" type="color" value="#38bdf8" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:4px; padding:1px; height:26px;"></label>
+                <label style="font-size:0.68rem; color:#94a3b8; display:flex; align-items:center; gap:4px; margin-top:14px;"><input id="new-rotado" type="checkbox"> de costado</label>
+            </div>
+            <button class="btn" style="width:100%; border-color:#22c55e; color:#4ade80;" onclick="crearRackNuevo()">Crear rack</button>
+        </div>
+
+        <textarea id="editor-export" readonly rows="8" style="width:100%; font-size:0.65rem; font-family:monospace; background:#0f172a; border:1px solid #334155; color:#e2e8f0; border-radius:6px; padding:6px; display:none;"></textarea>
+        <p id="editor-hint" style="font-size:0.68rem; color:#94a3b8; margin-top:6px;">Después de guardar, copiá el texto de abajo y pasámelo en el chat — ahí veo exactamente cómo quedó.</p>
+    </div>
+
+    <div id="right-detail-panel">
+        <button class="close-panel-btn" onclick="closeRightPanel()">✕</button>
+        <h3 style="color: #38bdf8; font-size: 0.9rem; border-bottom: 1px solid #334155; padding-bottom: 4px;">📍 Ficha del Módulo Estructural 3D</h3>
+        <div class="detail-row"><span class="detail-label">Pasillo / Rack:</span><span class="detail-value" id="r-rack" style="color:#38bdf8;">-</span></div>
+        <div class="detail-row"><span class="detail-label">Módulo Físico:</span><span class="detail-value" id="r-mod">-</span></div>
+        <div class="detail-row"><span class="detail-label">Nivel de Altura:</span><span class="detail-value" id="r-nivel" style="color:#facc15;">-</span></div>
+        <div class="detail-row"><span class="detail-label">Configuración Especial:</span><span class="detail-value" id="r-info" style="color:#4ade80;">-</span></div>
+        <div class="detail-row"><span class="detail-label">Estado:</span><span class="detail-value" id="r-estado" style="color:#38bdf8;">VACÍO / ESTRUCTURA LIBRE</span></div>
+
+        <div style="margin-top:4px;">
+            <div class="detail-label" style="margin-bottom:2px;">Descripción del contenido:</div>
+            <textarea id="r-desc" rows="3" placeholder="Ej: Pallets de gaseosa 2.25L, alta rotación, reponer los lunes."></textarea>
+            <div class="save-row">
+                <button class="btn btn-save" onclick="guardarDescripcion()">Guardar</button>
+                <span id="r-save-status">Guardado ✓</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePanel() {
+            const panel = document.getElementById('ui-panel');
+            panel.classList.toggle('collapsed');
+        }
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b0f19);
+
+        scene.fog = new THREE.Fog(0x0b0f19, 140, 420);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+
+        const hemiLight = new THREE.HemisphereLight(0xbfd6ff, 0x1a2233, 0.55);
+        scene.add(hemiLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff2e0, 1.15);
+        dirLight.position.set(80, 120, 60);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.set(2048, 2048);
+        dirLight.shadow.camera.near = 10;
+        dirLight.shadow.camera.far = 400;
+        dirLight.shadow.camera.left = -220;
+        dirLight.shadow.camera.right = 220;
+        dirLight.shadow.camera.top = 180;
+        dirLight.shadow.camera.bottom = -180;
+        dirLight.shadow.bias = -0.0015;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0x7db8ff, 0.25);
+        fillLight.position.set(-100, 60, -80);
+        scene.add(fillLight);
+
+        // Piso de hormigón pulido: textura procedural (juntas de dilatación + variación sutil de tono)
+        function createFloorTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#22293a';
+            ctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 4000; i++) {
+                const shade = 18 + Math.floor(Math.random() * 14);
+                ctx.fillStyle = `rgba(${shade + 10},${shade + 14},${shade + 26},${Math.random() * 0.35})`;
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.4, 1.4);
+            }
+            ctx.strokeStyle = 'rgba(10,14,22,0.55)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i <= 512; i += 64) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(26, 20);
+            tex.anisotropy = 8;
+            return tex;
+        }
+
+        const floorGeo = new THREE.PlaneGeometry(420, 320);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x2b3346,
+            roughness: 0.55,
+            metalness: 0.12,
+            map: createFloorTexture()
+        });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(420, 105, 0x38bdf8, 0x334155);
+        grid.position.y = 0.02;
+        grid.material.transparent = true;
+        grid.material.opacity = 0.35;
+        scene.add(grid);
+
+        const moduleDepth = 4.8;
+        const rackWidth = 2.0;
+        const distBloque = 0.5;
+        const distPasillo = 4.0;
+
+        const xA = -130;
+        const xB = xA + rackWidth + distBloque;
+        const xC = xB + rackWidth + distPasillo;
+        const xD = xC + rackWidth + distBloque;
+        const xE = xD + rackWidth + distPasillo;
+        const xF = xE + rackWidth + distBloque;
+        const xG = xF + rackWidth + distPasillo;
+        const xH = xG + rackWidth + distBloque;
+        const xI = xH + rackWidth + distPasillo;
+        const xJ = xI + rackWidth + distBloque;
+        const xK = xJ + rackWidth + distPasillo;
+        const xL = xK + rackWidth + distBloque;
+        const xM = xL + rackWidth + distPasillo;
+        const xN = xM + rackWidth + distBloque;
+        const xÑ = xN + rackWidth + distPasillo;
+        const xO = xÑ + rackWidth + distBloque;
+        const xP = xO + rackWidth + 3.0;
+
+        const rackDefinitions = {
+            'A': { x: xA, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'B': { x: xB, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'C': { x: xC, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'D': { x: xD, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'E': { x: xE, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'F': { x: xF, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'G': { x: xG, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'H': { x: xH, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'I': { x: xI, zStart: -60, modules: 8, levels: 3, color: 0x3b82f6, info: '3 Niveles Estándar (Bloque 5)' },
+            'J': { x: xJ, zStart: -60, modules: 8, subdivisions: 2, numStart: 25, levels: 3, color: 0x3b82f6, info: '8 módulos x 2 subdivisiones (25-40)' },
+            'K': { x: xK, zStart: -60, modules: 8, levels: 3, color: 0x3b82f6, info: '3 Niveles Estándar (Bloque 6)' },
+            'L': { x: xL, zStart: -60, modules: 8, levels: 3, color: 0x3b82f6, info: '3 Niveles Estándar (Bloque 6)' },
+            'M': { x: xM, zStart: -60, modules: 8, levels: 3, color: 0xf59e0b, info: '3 Niveles Estándar (Bloque 7)' },
+            'N': { x: xN, zStart: -60, modules: 8, levels: 3, color: 0xf59e0b, info: '3 Niveles Estándar (Bloque 7)' },
+            'Ñ': { x: xÑ, zStart: -60, modules: 8, levels: 3, color: 0xf59e0b, info: '3 Niveles Estándar (Bloque 8)' },
+            'O': { x: xO, zStart: -40.8, modules: 4, levels: 3, color: 0xec4899, info: '4 Módulos desde la Base' },
+
+            'P': { x: xP, zStart: -31.2, modules: 12, levels: 4, color: 0xa855f7, info: 'ESPECIAL 4 NIVELES (Exclusivo Pañales / ~1m alt.)' },
+            'P_ext': { x: xP, zStart: 34.0, modules: 6, levels: 3, color: 0xe11d48, info: 'Extensión P (Pasillo de 2m de luz)' },
+
+            'Q_int': { x: xÑ, zStart: 50.0, modules: 4, levels: 3, color: 0x10b981, info: 'Pasillo Q (Paralelo a Y)' },
+            'R_int': { x: xO, zStart: 50.0, modules: 4, levels: 3, color: 0x06b6d4, info: 'Pasillo R (Paralelo a Z)' },
+
+            'AB_A': { x: xA, zStart: -7.2, modules: 8, levels: 2, color: 0x84cc16, info: '8 Módulos de 2 NIVELES Completo (Frente a A)' },
+            'AA_H': { x: xH, zStart: -7.2, modules: 8, levels: 'escalonado', color: 0xeab308, info: 'Escalonado (Frente a H)' },
+
+            'S': { x: xI, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a I)' },
+            'T': { x: xJ, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a J)' },
+            'U': { x: xK, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a K)' },
+            'V': { x: xL, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a L)' },
+            'W': { x: xM, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a M)' },
+            'X': { x: xN, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a N)' },
+            'Y': { x: xÑ, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a Ñ)' },
+            'Z': { x: xO, zStart: -7.2, modules: 8, levels: 3, color: 0xf43f5e, info: '3 Niveles Estándar (Frente a O)' }
+        };
+
+        // Cancha de picking: coordenadas exactas que armaste vos mismo con el
+        // editor (botón "✏️ Editar Cancha" → "💾 Guardar estructura"). x y zStart
+        // ya son las posiciones finales, sin ninguna conversión de por medio.
+        const canchaCols = {
+            'B': { x: -128, zStart: 3,    color: 0x9ca3af, modulos: 4 },   // pared izq.
+            'C': { x: -125, zStart: -0.2, color: 0x22d3ee, modulos: 1, rotado: true },
+            'D': { x: -122, zStart: 7.2,  color: 0x22d3ee, modulos: 2 },
+            'E': { x: -120, zStart: -0.2, color: 0x22d3ee, modulos: 1, rotado: true },
+            'G': { x: -117, zStart: 3.2,  color: 0x22d3ee, modulos: 3 },
+            'I': { x: -115, zStart: 3.2,  color: 0xd946ef, modulos: 3 },
+            'J': { x: -112, zStart: -1.2, color: 0xd946ef, modulos: 1, rotado: true },
+            'K': { x: -110, zStart: 7.2,  color: 0xd946ef, modulos: 2 },
+            'L': { x: -107, zStart: -1.2, color: 0xd946ef, modulos: 1, rotado: true },
+            'N': { x: -104, zStart: 3,    color: 0x9ca3af, modulos: 4 }    // pared der.
+        };
+
+        Object.keys(canchaCols).forEach(col => {
+            const cfg = canchaCols[col];
+            rackDefinitions['PICK_' + col] = {
+                x: cfg.x,
+                zStart: cfg.zStart,
+                modules: cfg.modulos,
+                levels: 3,
+                color: cfg.color,
+                rotado: cfg.rotado || false,
+                info: 'Cancha de picking - columna ' + col + ' (' + cfg.modulos + ' rack)' + (cfg.rotado ? ' (de costado)' : '')
+            };
+        });
+
+
+        const rackPostMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.55 });
+        const rackBeamMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.35, metalness: 0.55 });
+        const shelfMat = new THREE.MeshStandardMaterial({ color: 0x3a4557, roughness: 0.5, metalness: 0.35 });
+        const COLOR_ROJO = 0xef4444;
+        const COLOR_AMARILLO = 0xeab308;
+        const COLOR_VERDE = 0x22c55e;
+
+        function createSign(text, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.strokeStyle = colorHex;
+            ctx.lineWidth = 8;
+            ctx.strokeRect(4, 4, 120, 120);
+
+            ctx.fillStyle = colorHex;
+            ctx.font = 'bold 50px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 64, 82);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return new THREE.Mesh(new THREE.PlaneGeometry(2.0, 2.0), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+        }
+
+        function createLocationLabel(text, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 160; canvas.height = 72;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+            ctx.fillRect(0, 0, 160, 72);
+            ctx.strokeStyle = colorHex;
+            ctx.lineWidth = 5;
+            ctx.strokeRect(3, 3, 154, 66);
+
+            ctx.fillStyle = colorHex;
+            ctx.font = 'bold 40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 80, 38);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return new THREE.Mesh(
+                new THREE.PlaneGeometry(1.15, 0.52),
+                new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true })
+            );
+        }
+
+        function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+            const words = (text || '').split(' ');
+            let line = '', lines = [];
+            for (let i = 0; i < words.length; i++) {
+                const test = line ? line + ' ' + words[i] : words[i];
+                if (ctx.measureText(test).width > maxWidth && line) {
+                    lines.push(line);
+                    line = words[i];
+                    if (lines.length === maxLines - 1) break;
+                } else {
+                    line = test;
+                }
+            }
+            if (line) lines.push(line);
+            if (lines.length === maxLines && words.join(' ') !== lines.join(' ')) {
+                lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…';
+            }
+            lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+        }
+
+        function createPalletCard(desc, fecha, paleta, colorHex) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 220; canvas.height = 108;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = 'rgba(9,14,24,0.95)';
+            ctx.fillRect(0, 0, 220, 108);
+            ctx.strokeStyle = colorHex;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, 216, 104);
+
+            const texto = (desc || '?').trim();
+            const inicial = texto.charAt(0).toUpperCase();
+            const resto = texto.slice(1).trim();
+
+            // letra inicial grande y en negrita, para que resalte a la distancia
+            ctx.fillStyle = colorHex;
+            ctx.font = '900 46px Arial';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(inicial, 8, 6);
+
+            // resto de la descripción, arriba, al lado de la inicial
+            ctx.fillStyle = '#eef2f9';
+            ctx.font = '600 15px Arial';
+            wrapCanvasText(ctx, resto, 52, 10, 158, 18, 3);
+
+            // vencimiento abajo a la izquierda
+            ctx.fillStyle = '#a6b2c8';
+            ctx.font = '600 14px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(fecha || '', 9, 84);
+
+            // n° de paleta abajo a la derecha
+            ctx.textAlign = 'right';
+            ctx.fillText('Pal. ' + (paleta || ''), 211, 84);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            return new THREE.Mesh(
+                new THREE.PlaneGeometry(1.35, 0.66),
+                new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, transparent: true })
+            );
+        }
+
+        const selectElem = document.getElementById('select-ubicacion');
+        const emptySlots = [];
+        const DESC_KEY = 'depot-pepsico-descripciones-v1';
+        // Datos reales cargados desde UBICACION_PARA_3D.xlsx (611 Logistica)
+        let descripciones = {};
+        let PACKING_ACTUAL = {};
+        let PALLET_INFO = {};
+
+        // Datos en vivo desde la API real de 611 Logistica (ver paso-a-paso-entorno-nuevo.md)
+        const API_URL = 'https://apineuroscien04.com/ApiGiroscop/webresources/Inventario/StockPorUbicacion01/B1,0GKa0AxvYx';
+
+        async function cargarDatosDesdeAPI() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                const filas = (data.stockPorUbicacion || []).filter(f => f.tipoUbicacion === 'ESTIBA');
+
+                const nuevasDescripciones = {};
+                const nuevoPacking = {};
+                const nuevoPalletInfo = {};
+
+                filas.forEach(row => {
+                    const code = row.ubicacion;
+                    const cajasReales = Math.round(row.unidades / row.unidadesxbulto);
+
+                    const linea = `${row.nomProducto} (Cod. ${row.codProducto}) \u00b7 Paleta ${row.paleta} \u00b7 Cant. ${row.unidades} \u00b7 Vence ${row.fechaVenc}`;
+                    nuevasDescripciones[code] = nuevasDescripciones[code] ? nuevasDescripciones[code] + '\n' + linea : linea;
+
+                    nuevoPacking[code] = nuevoPacking[code]
+                        ? Object.assign({}, nuevoPacking[code], { cajas: nuevoPacking[code].cajas + cajasReales })
+                        : { cajas: cajasReales, cajasPorPiso: CAJAS_POR_PISO_DEFAULT, cajasPorPallet: row.bultosxpaleta };
+
+                    if (!nuevoPalletInfo[code]) {
+                        nuevoPalletInfo[code] = { desc: row.nomProducto, fecha: row.fechaVenc, paleta: row.paleta };
+                    }
+                });
+
+                descripciones = nuevasDescripciones;
+                PACKING_ACTUAL = nuevoPacking;
+                PALLET_INFO = nuevoPalletInfo;
+            } catch (e) {
+                console.error('No se pudo conectar con la API de stock:', e);
+            }
+        }
+
+        
+        function buildModuleFrame(x, zCenter, depth, cfg, lvlYList, subdivisions, rotado, container) {
+            container = container || scene;
+            const maxH = lvlYList[lvlYList.length - 1] + 1.2;
+            const halfDepth = depth / 2;
+            // "rotado": el rack queda de costado — lo que normalmente es profundidad
+            // (eje Z) pasa a correr en el eje X, y el ancho normal (eje X) pasa a Z.
+            const pos = rotado
+                ? (dx, dz) => [x + dz, zCenter + dx]
+                : (dx, dz) => [x + dx, zCenter + dz];
+
+            // 4 postes de esquina: el armazón real del módulo
+            [-0.95, 0.95].forEach(dx => {
+                [-halfDepth, halfDepth].forEach(dz => {
+                    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, maxH, 0.12), rackPostMat);
+                    const [px, pz] = pos(dx, dz);
+                    post.position.set(px, maxH / 2, pz);
+                    post.castShadow = true;
+                    post.receiveShadow = true;
+                    container.add(post);
+                });
+            });
+
+            // El módulo es un solo rack (4 postes de esquina); adentro entran 2 pallets
+            // uno adelante y otro atrás, sin poste divisorio de por medio.
+
+            lvlYList.forEach(lvlY => {
+                // estante sólido: la chapa donde realmente se apoyan las paletas
+                const shelfGeo = rotado
+                    ? new THREE.BoxGeometry(depth - 0.1, 0.08, 2.05)
+                    : new THREE.BoxGeometry(2.05, 0.08, depth - 0.1);
+                const shelf = new THREE.Mesh(shelfGeo, shelfMat);
+                shelf.position.set(x, lvlY, zCenter);
+                shelf.castShadow = true;
+                shelf.receiveShadow = true;
+                container.add(shelf);
+
+                // vigas frontal/trasera como borde visible del estante
+                [-halfDepth, halfDepth].forEach(dz => {
+                    const beamGeo = rotado
+                        ? new THREE.BoxGeometry(0.08, 0.16, 2.05)
+                        : new THREE.BoxGeometry(2.05, 0.16, 0.08);
+                    const beam = new THREE.Mesh(beamGeo, rackBeamMat);
+                    const [bx, bz] = pos(0, dz);
+                    beam.position.set(bx, lvlY - 0.02, bz);
+                    beam.castShadow = true;
+                    beam.receiveShadow = true;
+                    container.add(beam);
+                });
+            });
+        }
+
+        /* -----------------------------------------------------------------
+           Cajas individuales por pallet, según los datos reales del Excel
+           (Cantidad UNIDADES reales / Unidades por Cajas / cajas por piso).
+           PACKING_ACTUAL: { "A25N1": { cajas, cajasPorPiso, cajasPorPallet } }
+           Si una ubicación no tiene ese dato (por ejemplo, se cargó a mano
+           desde el panel), se usa un bulto por defecto para que igual se
+           vea dividido en cajas y no como un bloque único.
+        ----------------------------------------------------------------- */
+        const CAJAS_POR_PISO_DEFAULT = 5;
+        const MAX_PISOS_VISUAL = 10;
+        const STACK_HEIGHT_BUDGET = 1.0;
+        const INST_MAX = 20000;
+
+        let instRojo, instAmarillo, instVerde;
+        const cajaGeo = new THREE.BoxGeometry(1, 1, 1);
+        const _dummy = new THREE.Object3D();
+
+        function initInstancedBoxes() {
+            const matRojo = new THREE.MeshStandardMaterial({ color: COLOR_ROJO, roughness: 0.55 });
+            const matAmarillo = new THREE.MeshStandardMaterial({ color: COLOR_AMARILLO, roughness: 0.55 });
+            const matVerde = new THREE.MeshStandardMaterial({ color: COLOR_VERDE, roughness: 0.55 });
+            instRojo = new THREE.InstancedMesh(cajaGeo, matRojo, INST_MAX);
+            instAmarillo = new THREE.InstancedMesh(cajaGeo, matAmarillo, INST_MAX);
+            instVerde = new THREE.InstancedMesh(cajaGeo, matVerde, INST_MAX);
+            [instRojo, instAmarillo, instVerde].forEach(inst => {
+                inst.count = 0;
+                inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                inst.castShadow = true;
+                inst.receiveShadow = true;
+                scene.add(inst);
+            });
+        }
+
+        function bucketParaColor(hex) {
+            if (hex === COLOR_ROJO) return instRojo;
+            if (hex === COLOR_AMARILLO) return instAmarillo;
+            return instVerde;
+        }
+
+        function rebuildAllPalletBoxes() {
+            if (!instRojo) return;
+            let nRojo = 0, nAmarillo = 0, nVerde = 0;
+
+            emptySlots.forEach(slot => {
+                const code = slot.userData.ubicacion;
+                const texto = descripciones[code];
+                if (!texto || !texto.trim()) return;
+
+                const vencColor = colorPorVencimiento(texto);
+                const finalColor = vencColor !== null ? vencColor : slot.userData.zoneColor;
+                const bucket = bucketParaColor(finalColor);
+
+                const pack = PACKING_ACTUAL[code];
+                const cajasPorPiso = Math.max(1, (pack && pack.cajasPorPiso) || CAJAS_POR_PISO_DEFAULT);
+                const cajasTotales = Math.max(1, (pack && pack.cajas) || cajasPorPiso);
+                const pisos = Math.min(MAX_PISOS_VISUAL, Math.ceil(cajasTotales / cajasPorPiso));
+                const boxH = Math.max(0.09, Math.min(0.32, STACK_HEIGHT_BUDGET / pisos));
+
+                const footprintW = 1.2;
+                const footprintD = Math.max(slot.userData.colDepth - 0.5, 0.5);
+                const cols = Math.min(cajasPorPiso, 5);
+                const rows = Math.max(1, Math.ceil(cajasPorPiso / cols));
+                const boxW = (footprintW / cols) * 0.86;
+                const boxD = (footprintD / rows) * 0.86;
+
+                let restantes = cajasTotales;
+                for (let piso = 0; piso < pisos && restantes > 0; piso++) {
+                    const y = slot.userData.shelfTop + 0.05 + boxH / 2 + piso * boxH;
+                    for (let r = 0; r < rows && restantes > 0; r++) {
+                        for (let c = 0; c < cols && restantes > 0; c++) {
+                            restantes--;
+                            const px = slot.position.x + (c - (cols - 1) / 2) * (footprintW / cols);
+                            const pz = slot.position.z + (r - (rows - 1) / 2) * (footprintD / rows);
+                            _dummy.position.set(px, y, pz);
+                            _dummy.rotation.set(0, 0, 0);
+                            _dummy.scale.set(boxW, boxH * 0.88, boxD);
+                            _dummy.updateMatrix();
+                            if (bucket === instRojo) bucket.setMatrixAt(nRojo++, _dummy.matrix);
+                            else if (bucket === instAmarillo) bucket.setMatrixAt(nAmarillo++, _dummy.matrix);
+                            else bucket.setMatrixAt(nVerde++, _dummy.matrix);
+                        }
+                    }
+                }
+            });
+
+            instRojo.count = nRojo;
+            instAmarillo.count = nAmarillo;
+            instVerde.count = nVerde;
+            instRojo.instanceMatrix.needsUpdate = true;
+            instAmarillo.instanceMatrix.needsUpdate = true;
+            instVerde.instanceMatrix.needsUpdate = true;
+        }
+
+        function buildSlotBox(x, zCenter, subDepth, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, rotado, container) {
+            container = container || scene;
+            const shelfTop = lvlY + 0.04;
+
+            // Marca fina del casillero: siempre presente, es el target de click/mira
+            const slotMat = new THREE.MeshStandardMaterial({
+                color: cfg.color,
+                transparent: true,
+                opacity: 0.18,
+                roughness: 0.5
+            });
+            const slotGeo = rotado
+                ? new THREE.BoxGeometry(Math.max(subDepth - 0.3, 0.5), 0.06, 1.5)
+                : new THREE.BoxGeometry(1.5, 0.06, Math.max(subDepth - 0.3, 0.5));
+            const slotMesh = new THREE.Mesh(slotGeo, slotMat);
+            slotMesh.position.set(x, shelfTop + 0.04, zCenter);
+
+            // Haz de selección: se prende solo cuando este casillero está elegido
+            const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0, depthWrite: false });
+            const beamMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.75, 3.2, 12, 1, true), beamMat);
+            beamMesh.position.set(x, shelfTop + 1.7, zCenter);
+            container.add(beamMesh);
+
+            const levelCode = `${code}N${lvlIdx + 1}`;
+            slotMesh.userData = {
+                rack: zone,
+                modulo: modNum,
+                nivel: lvlIdx + 1,
+                totalNiveles: numLevels,
+                ubicacion: levelCode,
+                info: cfg.info,
+                zoneColor: cfg.color,
+                shelfTop: shelfTop,
+                colDepth: subDepth,
+                highlightMesh: beamMesh
+            };
+
+            if (descripciones[levelCode] && descripciones[levelCode].trim()) {
+                slotMat.opacity = 0.05;
+
+                const info = PALLET_INFO[levelCode];
+                if (info) {
+                    const vc = colorPorVencimiento(descripciones[levelCode]);
+                    const colorHex = '#' + (vc !== null ? vc : cfg.color).toString(16).padStart(6, '0');
+                    const card = createPalletCard(info.desc, info.fecha, info.paleta, colorHex);
+                    card.position.set(x, shelfTop + 1.5, zCenter);
+                    container.add(card);
+                }
+            }
+
+            container.add(slotMesh);
+            emptySlots.push(slotMesh);
+
+            const opt = document.createElement('option');
+            opt.value = levelCode;
+            opt.textContent = `${levelCode} (${zone} - Nivel ${lvlIdx + 1}/${numLevels})`;
+            selectElem.appendChild(opt);
+        }
+
+        const pickGroups = {}; // racks movibles/editables: prefijo PICK_ (cancha) o CUSTOM_ (creados a mano)
+        let customCounter = 0;
+
+        function esEditable(zone) {
+            return zone.indexOf('PICK_') === 0 || zone.indexOf('CUSTOM_') === 0;
+        }
+
+        function construirZona(zone, cfg) {
+            const x = cfg.x;
+            const posZStart = cfg.zStart;
+            const numModules = cfg.modules;
+            const subdivisions = cfg.subdivisions || 1;
+
+            let container = scene;
+            if (esEditable(zone)) {
+                container = new THREE.Group();
+                scene.add(container);
+                pickGroups[zone] = { group: container, baseX: x, baseZ: posZStart };
+            }
+
+            for (let mod = 1; mod <= numModules; mod++) {
+                const groupCenter = posZStart + (mod - 1) * moduleDepth;
+
+                let numLevels = cfg.levels;
+                if (cfg.levels === 'escalonado') {
+                    numLevels = (mod <= 5) ? 2 : 3;
+                }
+
+                let lvlYList = [0.1, 2.6, 5.1];
+                if (numLevels === 2) lvlYList = [0.1, 2.8];
+                if (numLevels === 4) lvlYList = [0.1, 1.6, 3.1, 4.6];
+
+                buildModuleFrame(x, groupCenter, moduleDepth, cfg, lvlYList, subdivisions, cfg.rotado, container);
+                const maxH = lvlYList[lvlYList.length - 1] + 1.2;
+                const colorHex = '#' + cfg.color.toString(16).padStart(6, '0');
+
+                if (subdivisions === 2) {
+                    // Cada módulo físico contiene 2 sub-ubicaciones (ej: módulo -> 25 y 26)
+                    const subDepth = moduleDepth / 2 - 0.35;
+                    [-moduleDepth/4, moduleDepth/4].forEach((offset, subIdx) => {
+                        const subZ = groupCenter + offset;
+                        const totalPos = numModules * 2;
+                        const physIndex = (mod - 1) * 2 + subIdx;
+                        const modNum = cfg.numStart + (totalPos - 1) - physIndex;
+                        const code = `${zone}${modNum}`;
+                        lvlYList.forEach((lvlY, lvlIdx) => {
+                            buildSlotBox(x, subZ, subDepth, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, false, container);
+                        });
+
+                        const label = createLocationLabel(code, colorHex);
+                        label.position.set(x, maxH + 0.35, subZ);
+                        container.add(label);
+                    });
+                } else {
+                    const modNum = cfg.numStart ? (cfg.numStart + mod - 1) : mod;
+                    const code = cfg.numStart ? `${zone}${modNum}` : `${zone}-MOD${mod}`;
+                    lvlYList.forEach((lvlY, lvlIdx) => {
+                        buildSlotBox(x, groupCenter, moduleDepth - 0.3, cfg, zone, numLevels, lvlY, lvlIdx, code, modNum, cfg.rotado, container);
+                    });
+
+                    const label = createLocationLabel(code, colorHex);
+                    label.position.set(x, maxH + 0.35, groupCenter);
+                    container.add(label);
+                }
+            }
+
+            const sign = createSign(zone.split('_')[0], '#' + cfg.color.toString(16).padStart(6, '0'));
+            sign.position.set(x, 6.0, posZStart - 2.6);
+            container.add(sign);
+        }
+
+        function construirTodoElDeposito() {
+            Object.keys(rackDefinitions).forEach(zone => construirZona(zone, rackDefinitions[zone]));
+        }
+
+        function resetCamera() {
+            camera.position.set(-10.0, 95.0, 120.0);
+            controls.target.set(-10.0, 2.0, 10.0);
+            controls.update();
+        }
+
+        async function iniciarDeposito() {
+            await cargarDatosDesdeAPI(); // trae descripciones/PACKING_ACTUAL/PALLET_INFO reales antes de dibujar nada
+            construirTodoElDeposito();
+            resetCamera();
+            initInstancedBoxes();
+            rebuildAllPalletBoxes();
+            initDescripciones(); // combina con ediciones manuales guardadas en este navegador
+
+            // refresco automático cada 10 minutos
+            setInterval(async () => {
+                await cargarDatosDesdeAPI();
+                rebuildAllPalletBoxes();
+                applyFilledStates();
+            }, 10 * 60 * 1000);
+        }
+        iniciarDeposito();
+
+        function focusRack(zone) {
+            const cfg = rackDefinitions[zone];
+            if (!cfg) return;
+            const x = cfg.x;
+            const posZStart = cfg.zStart;
+            camera.position.set(x + 5.0, 12.0, posZStart - 12.0);
+            controls.target.set(x, 3.0, posZStart + 10.0);
+            controls.update();
+        }
+
+        let selectedMesh = null;
+
+        function showModuleDetail(m) {
+            if (selectedMesh) refreshSlotVisual(selectedMesh);
+            selectedMesh = m;
+            m.userData.highlightMesh.material.opacity = 0.35;
+
+            const d = m.userData;
+            document.getElementById('r-rack').innerText = 'Rack ' + d.rack.split('_')[0];
+            document.getElementById('r-mod').innerText = `Módulo ${d.modulo}`;
+            document.getElementById('r-nivel').innerText = `Nivel ${d.nivel} de ${d.totalNiveles}`;
+            document.getElementById('r-info').innerText = d.info;
+            document.getElementById('r-desc').value = descripciones[d.ubicacion] || '';
+            updateEstadoRow(d.ubicacion);
+            document.getElementById('right-detail-panel').style.display = 'flex';
+        }
+
+        function updateEstadoRow(code) {
+            const el = document.getElementById('r-estado');
+            const texto = descripciones[code];
+            const filled = !!(texto && texto.trim());
+            if (!filled) {
+                el.textContent = 'VACÍO / ESTRUCTURA LIBRE';
+                el.style.color = '#38bdf8';
+                return;
+            }
+            const vencColor = colorPorVencimiento(texto);
+            if (vencColor === COLOR_ROJO) { el.textContent = 'OCUPADO · VENCIMIENTO PRÓXIMO'; el.style.color = '#ef4444'; }
+            else if (vencColor === COLOR_AMARILLO) { el.textContent = 'OCUPADO · VENCIMIENTO MODERADO'; el.style.color = '#eab308'; }
+            else if (vencColor === COLOR_VERDE) { el.textContent = 'OCUPADO · VENCIMIENTO LEJANO'; el.style.color = '#22c55e'; }
+            else { el.textContent = 'CON DESCRIPCIÓN CARGADA'; el.style.color = '#4ade80'; }
+        }
+
+        function guardarDescripcion() {
+            if (!selectedMesh) return;
+            const code = selectedMesh.userData.ubicacion;
+            descripciones[code] = document.getElementById('r-desc').value;
+            persistDescripciones();
+            applyFilledStates();
+            selectedMesh.userData.highlightMesh.material.opacity = 0.35;
+            updateEstadoRow(code);
+            const status = document.getElementById('r-save-status');
+            status.style.opacity = '1';
+            setTimeout(() => { status.style.opacity = '0'; }, 1400);
+        }
+
+        function vaciarTodasDescripciones() {
+            if (!confirm('¿Restaurar los datos originales del Excel y descartar los cambios manuales? Esta acción no se puede deshacer.')) return;
+            descripciones = Object.assign({}, DEFAULT_DESCRIPCIONES);
+            persistDescripciones();
+            applyFilledStates();
+            if (selectedMesh) {
+                const code = selectedMesh.userData.ubicacion;
+                document.getElementById('r-desc').value = descripciones[code] || '';
+                selectedMesh.userData.highlightMesh.material.opacity = 0.35;
+                updateEstadoRow(code);
+            }
+        }
+
+        async function persistDescripciones() {
+            try {
+                await window.storage.set(DESC_KEY, JSON.stringify(descripciones), false);
+            } catch (e) {
+                console.error('No se pudo guardar la descripción:', e);
+            }
+        }
+
+        function extraerFechasVencimiento(texto) {
+            if (!texto) return [];
+            const re = /Vence (\d{2})\/(\d{2})\/(\d{4})/g;
+            const fechas = [];
+            let m;
+            while ((m = re.exec(texto)) !== null) {
+                fechas.push(new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1])));
+            }
+            return fechas;
+        }
+
+        function colorPorVencimiento(texto) {
+            const fechas = extraerFechasVencimiento(texto);
+            if (!fechas.length) return null;
+            const masCercana = new Date(Math.min.apply(null, fechas));
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            const diasRestantes = Math.round((masCercana - hoy) / 86400000);
+            if (diasRestantes <= 60) return COLOR_ROJO;
+            if (diasRestantes <= 88) return COLOR_AMARILLO;
+            return COLOR_VERDE;
+        }
+
+        function refreshSlotVisual(slot) {
+            const code = slot.userData.ubicacion;
+            const texto = descripciones[code];
+            const filled = !!(texto && texto.trim());
+            slot.material.opacity = filled ? 0.05 : 0.18;
+            slot.userData.highlightMesh.material.opacity = 0;
+        }
+
+        function applyFilledStates() {
+            emptySlots.forEach(refreshSlotVisual);
+            rebuildAllPalletBoxes();
+            Array.from(selectElem.options).forEach(opt => {
+                if (!opt.value) return;
+                const base = opt.textContent.replace(/^✓ /, '');
+                const filled = !!(descripciones[opt.value] && descripciones[opt.value].trim());
+                opt.textContent = (filled ? '✓ ' : '') + base;
+            });
+        }
+
+        async function initDescripciones() {
+            try {
+                const res = await window.storage.get(DESC_KEY, false);
+                if (res && res.value) {
+                    const overrides = JSON.parse(res.value);
+                    descripciones = Object.assign({}, DEFAULT_DESCRIPCIONES, overrides);
+                }
+            } catch (e) {
+                /* todavía no hay cambios guardados: quedan los datos originales del Excel */
+            }
+            applyFilledStates();
+        }
+
+        function closeRightPanel() {
+            document.getElementById('right-detail-panel').style.display = 'none';
+            if (selectedMesh) {
+                refreshSlotVisual(selectedMesh);
+                selectedMesh = null;
+            }
+        }
+
+        function onSelectUbicacion(code) {
+            if (!code) { closeRightPanel(); return; }
+            const m = emptySlots.find(item => item.userData.ubicacion === code);
+            if (m) {
+                showModuleDetail(m);
+                const worldPos = new THREE.Vector3();
+                m.getWorldPosition(worldPos);
+                camera.position.set(worldPos.x + 6, worldPos.y + 5, worldPos.z + 8);
+                controls.target.copy(worldPos);
+                controls.update();
+            }
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const lookRaycaster = new THREE.Raycaster();
+        lookRaycaster.far = 6.5;
+        let currentAutoTarget = null;
+        let lookFrameCounter = 0;
+
+        function updateWalkLookTarget() {
+            lookFrameCounter++;
+            if (lookFrameCounter % 3 !== 0) return; // no hace falta chequear todos los frames
+            const rotY = oldMan.rotation.y;
+            const dir = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY));
+            const origin = new THREE.Vector3(oldMan.position.x, 1.6, oldMan.position.z);
+            lookRaycaster.set(origin, dir);
+            const hits = lookRaycaster.intersectObjects(emptySlots);
+            if (hits.length) {
+                const mesh = hits[0].object;
+                if (mesh.userData.ubicacion !== currentAutoTarget) {
+                    currentAutoTarget = mesh.userData.ubicacion;
+                    showModuleDetail(mesh);
+                }
+            } else if (currentAutoTarget !== null) {
+                currentAutoTarget = null;
+                closeRightPanel();
+            }
+        }
+
+        window.addEventListener('click', (e) => {
+            if (e.target.tagName !== 'CANVAS') return;
+            if (walkMode && dragDistance > 8) return; // fue un swipe para mirar, no una selección
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(emptySlots);
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                if (editMode) {
+                    const zone = clickedMesh.userData.rack;
+                    if (zone && esEditable(zone)) {
+                        selectedPickZone = zone;
+                        document.getElementById('editor-selected').textContent = zone;
+                    }
+                    return;
+                }
+                selectElem.value = clickedMesh.userData.ubicacion;
+                showModuleDetail(clickedMesh);
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        /* ----- Viejito caminando por el pasillo central ----- */
+        function createNameTag(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 160; canvas.height = 72;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 160, 72);
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 40px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 80, 38);
+            const tex = new THREE.CanvasTexture(canvas);
+            return new THREE.Mesh(
+                new THREE.PlaneGeometry(0.55, 0.25),
+                new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide })
+            );
+        }
+
+        function createFace() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+            ctx.strokeStyle = '#5a4632'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(32, 50); ctx.lineTo(50, 45); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(78, 45); ctx.lineTo(96, 50); ctx.stroke();
+            ctx.fillStyle = '#241a12';
+            ctx.beginPath(); ctx.ellipse(42, 60, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(86, 60, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(120,90,70,0.45)'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(64, 62); ctx.lineTo(59, 80); ctx.stroke();
+            ctx.strokeStyle = '#7a4a3a'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(50, 93); ctx.quadraticCurveTo(64, 100, 78, 93); ctx.stroke();
+            const tex = new THREE.CanvasTexture(canvas);
+            const face = new THREE.Mesh(new THREE.PlaneGeometry(0.185, 0.185), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
+            return face;
+        }
+
+        // Segmento de miembro (brazo/pierna): el pivote queda en el extremo SUPERIOR
+        // (la articulación), y el cilindro cuelga hacia abajo `length` metros — así
+        // rotar el Group padre dobla el miembro desde el hombro/codo/cadera/rodilla,
+        // como una articulación real.
+        function limbSegment(topR, botR, length, mat, segs) {
+            const geo = new THREE.CylinderGeometry(topR, botR, length, segs || 10);
+            geo.translate(0, -length / 2, 0);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function buildOldMan() {
+            const group = new THREE.Group();
+
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xd8ae87, roughness: 0.65 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0xd7dade, roughness: 0.9 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: 0x36485c, roughness: 0.8 });
+            const vestMat = new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.55 });
+            const stripeMat = new THREE.MeshStandardMaterial({ color: 0xe9edf1, roughness: 0.35, metalness: 0.15 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x232a38, roughness: 0.8 });
+            const shoeMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.55 });
+            const phoneMat = new THREE.MeshStandardMaterial({ color: 0x14171f, roughness: 0.4 });
+            const screenMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x2496e6, emissiveIntensity: 0.7, roughness: 0.3 });
+
+            // ---- Proporciones reales de un adulto (~1.75 m de altura total) ----
+            const hipY = 0.92;
+            const upperLegLen = 0.44;
+            const lowerLegLen = 0.40;
+            const footH = 0.08; // hipY - upperLegLen - lowerLegLen = footH ⇒ el pie toca el piso (y=0)
+            const shoulderY = 1.46;
+            const neckLen = 0.07;
+            const headR = 0.115;
+            const upperArmLen = 0.28;
+            const forearmLen = 0.26;
+
+            const pelvis = new THREE.Group();
+            pelvis.position.set(0, hipY, 0);
+            group.add(pelvis);
+
+            const torsoH = shoulderY - hipY;
+            const torsoGeo = new THREE.CylinderGeometry(0.145, 0.17, torsoH, 12);
+            torsoGeo.translate(0, torsoH / 2, 0);
+            const torso = new THREE.Mesh(torsoGeo, shirtMat);
+            torso.castShadow = true; torso.receiveShadow = true;
+            pelvis.add(torso);
+
+            // chaleco reflectante (vestimenta típica de depósito) sobre el torso
+            const vestGeo = new THREE.CylinderGeometry(0.155, 0.178, torsoH * 0.82, 12);
+            vestGeo.translate(0, torsoH * 0.82 / 2 + torsoH * 0.08, 0);
+            const vest = new THREE.Mesh(vestGeo, vestMat);
+            vest.castShadow = true;
+            pelvis.add(vest);
+            const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.182, 0.05, 12), stripeMat);
+            stripe.position.y = torsoH * 0.52;
+            pelvis.add(stripe);
+
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, neckLen, 8), skinMat);
+            neck.position.y = torsoH + neckLen / 2;
+            neck.castShadow = true;
+            pelvis.add(neck);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.y = torsoH + neckLen + headR;
+            pelvis.add(headGroup);
+
+            const head = new THREE.Mesh(new THREE.SphereGeometry(headR, 18, 18), skinMat);
+            head.castShadow = true;
+            headGroup.add(head);
+
+            const face = createFace();
+            face.position.set(0, -0.008, headR * 0.97);
+            headGroup.add(face);
+
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(headR * 1.05, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.85), hairMat);
+            hair.position.y = headR * 0.12;
+            headGroup.add(hair);
+
+            const nameTag = createNameTag('Nico');
+            nameTag.position.set(0, headR + 0.17, 0);
+            headGroup.add(nameTag);
+
+            // ---- Brazos: hombro -> codo -> mano, cada uno como Group articulado ----
+            function buildArm(xSign, forearmMat) {
+                const shoulder = new THREE.Group();
+                shoulder.position.set(xSign * 0.20, shoulderY - hipY, 0);
+                pelvis.add(shoulder);
+
+                shoulder.add(limbSegment(0.052, 0.046, upperArmLen, shirtMat));
+
+                const elbow = new THREE.Group();
+                elbow.position.set(0, -upperArmLen, 0);
+                shoulder.add(elbow);
+
+                elbow.add(limbSegment(0.042, 0.036, forearmLen, forearmMat));
+
+                const hand = new THREE.Group();
+                hand.position.set(0, -forearmLen, 0);
+                elbow.add(hand);
+                const handMesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), skinMat);
+                handMesh.scale.set(0.85, 1, 0.65);
+                handMesh.position.y = -0.02;
+                handMesh.castShadow = true;
+                hand.add(handMesh);
+
+                return { shoulder, elbow, hand };
+            }
+
+            const armL = buildArm(-1, shirtMat);
+            const armR = buildArm(1, skinMat); // manga arremangada del brazo que sostiene el teléfono
+
+            // brazo derecho doblado, con el teléfono pegado a la oreja
+            armR.shoulder.rotation.set(-1.6, 0, -1.6);
+            armR.elbow.rotation.set(-2.0, 0, 0);
+
+            const phone = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.1, 0.018), phoneMat);
+            phone.position.set(0, -0.06, 0.025);
+            armR.hand.add(phone);
+            const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.07), screenMat);
+            screen.position.set(0, -0.06, 0.035);
+            armR.hand.add(screen);
+
+            // ---- Piernas: cadera -> rodilla -> pie, cada uno como Group articulado ----
+            function buildLeg(xSign) {
+                const hip = new THREE.Group();
+                hip.position.set(xSign * 0.10, 0, 0);
+                pelvis.add(hip);
+
+                hip.add(limbSegment(0.088, 0.075, upperLegLen, pantsMat));
+
+                const knee = new THREE.Group();
+                knee.position.set(0, -upperLegLen, 0);
+                hip.add(knee);
+
+                knee.add(limbSegment(0.07, 0.052, lowerLegLen, pantsMat));
+
+                const foot = new THREE.Group();
+                foot.position.set(0, -lowerLegLen, 0);
+                knee.add(foot);
+                const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.095, footH, 0.24), shoeMat);
+                shoe.position.set(0, -footH / 2, 0.055);
+                shoe.castShadow = true; shoe.receiveShadow = true;
+                foot.add(shoe);
+
+                return { hip, knee, foot };
+            }
+
+            const legL = buildLeg(-1);
+            const legR = buildLeg(1);
+
+            group.userData = { legL, legR, armL, armR, headGroup, headY: hipY + headGroup.position.y };
+            return group;
+        }
+
+        const oldMan = buildOldMan();
+        const walkZ = -16.8; // pasillo central entre las filas traseras y delanteras
+        const walkPath = [
+            { x: xA - 4, z: walkZ },
+            { x: xP + 4, z: walkZ }
+        ];
+        oldMan.position.set(walkPath[0].x, 0, walkPath[0].z);
+        oldMan.rotation.y = Math.PI / 2;
+        scene.add(oldMan);
+
+        // Ciclo de marcha: cadera+rodilla de cada pierna en fase opuesta, con la
+        // rodilla flexionando solo durante el balanceo (nunca hacia atrás).
+        // El brazo derecho queda fijo sosteniendo el teléfono; solo el izquierdo
+        // acompaña el paso, como al caminar con una mano ocupada.
+        function animateWalkCycle(t) {
+            const legAmp = 0.46, kneeAmp = 0.85, armAmp = 0.32;
+            const phaseL = t, phaseR = t + Math.PI;
+            const d = oldMan.userData;
+
+            d.legL.hip.rotation.x = Math.sin(phaseL) * legAmp;
+            d.legL.knee.rotation.x = Math.max(0, -Math.sin(phaseL)) * kneeAmp;
+            d.legR.hip.rotation.x = Math.sin(phaseR) * legAmp;
+            d.legR.knee.rotation.x = Math.max(0, -Math.sin(phaseR)) * kneeAmp;
+
+            d.armL.shoulder.rotation.x = Math.sin(phaseR) * armAmp;
+            d.armL.elbow.rotation.x = Math.max(0, -Math.sin(phaseR)) * 0.25;
+
+            oldMan.position.y = Math.abs(Math.sin(t)) * 0.045;
+        }
+
+        function resetWalkCycle() {
+            const d = oldMan.userData;
+            d.legL.hip.rotation.x = 0; d.legL.knee.rotation.x = 0;
+            d.legR.hip.rotation.x = 0; d.legR.knee.rotation.x = 0;
+            d.armL.shoulder.rotation.x = 0; d.armL.elbow.rotation.x = 0;
+            oldMan.position.y = 0;
+        }
+
+        let walkT = 0, walkDir = 1;
+        function updateOldMan() {
+            walkT += walkDir * 0.00035;
+            if (walkT >= 1) { walkT = 1; walkDir = -1; }
+            if (walkT <= 0) { walkT = 0; walkDir = 1; }
+
+            const a = walkPath[0], b = walkPath[1];
+            oldMan.position.x = a.x + (b.x - a.x) * walkT;
+            oldMan.position.z = a.z;
+            oldMan.rotation.y = walkDir > 0 ? Math.PI / 2 : -Math.PI / 2;
+
+            animateWalkCycle(performance.now() * 0.006);
+        }
+
+        /* ----- Modo caminar: manejarlo con WASD / flechas ----- */
+        let walkMode = false;
+        const keysPressed = {};
+
+        window.addEventListener('keydown', (e) => {
+            if (!walkMode) return;
+            const tag = document.activeElement ? document.activeElement.tagName : '';
+            if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+            keysPressed[e.key.toLowerCase()] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.key.toLowerCase()] = false;
+        });
+
+        /* ----- Joystick táctil (celular/tablet) ----- */
+        let joystickX = 0, joystickY = 0, joystickActive = false, joystickPointerId = null;
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickKnob = document.getElementById('joystick-knob');
+        const JOYSTICK_RADIUS = 45;
+
+        function joystickHandleMove(clientX, clientY) {
+            const rect = joystickBase.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            let dx = clientX - cx;
+            let dy = clientY - cy;
+            const dist = Math.hypot(dx, dy);
+            if (dist > JOYSTICK_RADIUS) {
+                dx = (dx / dist) * JOYSTICK_RADIUS;
+                dy = (dy / dist) * JOYSTICK_RADIUS;
+            }
+            joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            joystickX = dx / JOYSTICK_RADIUS;
+            joystickY = dy / JOYSTICK_RADIUS;
+        }
+
+        function joystickReset() {
+            joystickActive = false;
+            joystickPointerId = null;
+            joystickX = 0;
+            joystickY = 0;
+            joystickKnob.style.transform = 'translate(0px, 0px)';
+        }
+
+        joystickBase.addEventListener('pointerdown', (e) => {
+            joystickActive = true;
+            joystickPointerId = e.pointerId;
+            joystickBase.setPointerCapture(e.pointerId);
+            joystickHandleMove(e.clientX, e.clientY);
+        });
+        joystickBase.addEventListener('pointermove', (e) => {
+            if (!joystickActive || e.pointerId !== joystickPointerId) return;
+            joystickHandleMove(e.clientX, e.clientY);
+        });
+        joystickBase.addEventListener('pointerup', joystickReset);
+        joystickBase.addEventListener('pointercancel', joystickReset);
+
+        let camYaw = 0, camPitch = 0.15;
+        let camDist = 6.5;
+        const CAM_DIST_MIN = 2.5;
+        const CAM_DIST_MAX = 14;
+        const LOOK_SENSITIVITY = 0.0045;
+
+        function getViewForwardFlat() {
+            return new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
+        }
+
+        function updateChaseCamera() {
+            const forward = new THREE.Vector3(
+                Math.sin(camYaw) * Math.cos(camPitch),
+                Math.sin(camPitch),
+                Math.cos(camYaw) * Math.cos(camPitch)
+            );
+            const eye = new THREE.Vector3(oldMan.position.x, oldMan.position.y + oldMan.userData.headY, oldMan.position.z);
+            camera.position.copy(eye).addScaledVector(forward, -camDist);
+            camera.position.y += 0.9;
+            const lookTarget = eye.clone().addScaledVector(forward, 4);
+            camera.lookAt(lookTarget);
+        }
+
+        /* ----- Modo editor: mover racks de la cancha de picking a mano ----- */
+        let editMode = false;
+        let selectedPickZone = null;
+        const PICK_LAYOUT_KEY = 'depot-pepsico-pick-layout-v2'; // v2: coordenadas ya quedaron fijas en el código
+        const NUDGE_STEP = 1.0;
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            const btn = document.getElementById('edit-toggle-btn');
+            const panel = document.getElementById('editor-panel');
+            if (editMode) {
+                btn.textContent = '✅ Salir del editor';
+                panel.style.display = 'block';
+                if (walkMode) toggleWalkMode();
+            } else {
+                btn.textContent = '✏️ Editar Cancha';
+                panel.style.display = 'none';
+            }
+        }
+
+        function nudgePick(dx, dz) {
+            if (!selectedPickZone) { alert('Primero hacé clic en un rack de la cancha para seleccionarlo.'); return; }
+            const p = pickGroups[selectedPickZone];
+            p.group.position.x += dx * NUDGE_STEP;
+            p.group.position.z += dz * NUDGE_STEP;
+        }
+
+        function resetPick() {
+            if (!selectedPickZone) return;
+            pickGroups[selectedPickZone].group.position.set(0, 0, 0);
+        }
+
+        function crearRackNuevo() {
+            const x = parseFloat(document.getElementById('new-x').value);
+            const z = parseFloat(document.getElementById('new-z').value);
+            const modulos = Math.max(1, parseInt(document.getElementById('new-modulos').value, 10) || 1);
+            const niveles = parseInt(document.getElementById('new-niveles').value, 10);
+            const colorHex = document.getElementById('new-color').value.replace('#', '0x');
+            const rotado = document.getElementById('new-rotado').checked;
+
+            if (isNaN(x) || isNaN(z)) { alert('Revisá los valores de X y Z.'); return; }
+
+            customCounter++;
+            const zone = 'CUSTOM_' + customCounter;
+            const cfg = {
+                x: x, zStart: z, modules: modulos, levels: niveles,
+                color: parseInt(colorHex, 16), rotado: rotado,
+                info: 'Rack creado a mano (' + modulos + ' rack)' + (rotado ? ' (de costado)' : '')
+            };
+            rackDefinitions[zone] = cfg;
+            construirZona(zone, cfg);
+            applyFilledStates();
+
+            selectedPickZone = zone;
+            document.getElementById('editor-selected').textContent = zone + ' (nuevo)';
+        }
+
+        function borrarRackSeleccionado() {
+            if (!selectedPickZone) { alert('Primero seleccioná un rack haciendo clic sobre él.'); return; }
+            if (!confirm('¿Borrar el rack "' + selectedPickZone + '"? No se puede deshacer.')) return;
+
+            const p = pickGroups[selectedPickZone];
+            if (p) {
+                scene.remove(p.group);
+                p.group.traverse(obj => {
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) obj.material.dispose();
+                });
+                delete pickGroups[selectedPickZone];
+            }
+            delete rackDefinitions[selectedPickZone];
+
+            // sacar sus casilleros de la lista de selección y del desplegable
+            for (let i = emptySlots.length - 1; i >= 0; i--) {
+                if (emptySlots[i].userData.rack === selectedPickZone) emptySlots.splice(i, 1);
+            }
+            Array.from(selectElem.options).forEach(opt => {
+                if (opt.value.indexOf(selectedPickZone) === 0) selectElem.removeChild(opt);
+            });
+
+            selectedPickZone = null;
+            document.getElementById('editor-selected').textContent = 'ninguno';
+        }
+
+        async function guardarEstructuraCancha() {
+            const resultado = {};
+            Object.keys(pickGroups).forEach(zone => {
+                const p = pickGroups[zone];
+                resultado[zone] = {
+                    x: Math.round((p.baseX + p.group.position.x) * 10) / 10,
+                    zStart: Math.round((p.baseZ + p.group.position.z) * 10) / 10
+                };
+            });
+
+            const texto = JSON.stringify(resultado, null, 2);
+            const textarea = document.getElementById('editor-export');
+            textarea.value = texto;
+            textarea.style.display = 'block';
+
+            try {
+                await window.storage.set(PICK_LAYOUT_KEY, texto, false);
+            } catch (e) {
+                console.error('No se pudo guardar la estructura:', e);
+            }
+        }
+
+        async function cargarEstructuraGuardada() {
+            try {
+                const res = await window.storage.get(PICK_LAYOUT_KEY, false);
+                if (!res || !res.value) return;
+                const datos = JSON.parse(res.value);
+                Object.keys(datos).forEach(zone => {
+                    const p = pickGroups[zone];
+                    if (!p) return;
+                    p.group.position.x = datos[zone].x - p.baseX;
+                    p.group.position.z = datos[zone].zStart - p.baseZ;
+                });
+            } catch (e) {
+                /* todavía no hay una estructura guardada */
+            }
+        }
+        cargarEstructuraGuardada();
+
+        function toggleWalkMode() {
+            walkMode = !walkMode;
+            const btn = document.getElementById('walk-toggle-btn');
+            const hint = document.getElementById('walk-hint');
+            const joystick = document.getElementById('joystick-base');
+            if (walkMode) {
+                btn.textContent = '🛰️ Cámara Libre';
+                hint.style.display = 'block';
+                joystick.style.display = 'block';
+                camYaw = oldMan.rotation.y;
+                camPitch = 0.15;
+                controls.enabled = false;
+                updateChaseCamera();
+            } else {
+                btn.textContent = '🚶 Modo Caminar';
+                hint.style.display = 'none';
+                joystick.style.display = 'none';
+                Object.keys(keysPressed).forEach(k => keysPressed[k] = false);
+                joystickX = 0;
+                joystickY = 0;
+                currentAutoTarget = null;
+                lookActive = false;
+                activeTouches.clear();
+                pinchStartDist = null;
+                controls.enabled = true;
+            }
+        }
+
+        /* ----- Apuntar/mirar: arrastre táctil o de mouse en cualquier parte del canvas ----- */
+        let lookActive = false, lookPointerId = null, lookLastX = 0, lookLastY = 0, dragDistance = 0;
+
+        /* ----- Pellizco de dos dedos: acercar/alejar la cámara ----- */
+        const activeTouches = new Map();
+        let pinchStartDist = null, pinchStartCamDist = null;
+
+        function pinchDistance() {
+            const pts = Array.from(activeTouches.values());
+            return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        }
+
+        renderer.domElement.addEventListener('pointerdown', (e) => {
+            if (!walkMode) return;
+            activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (activeTouches.size === 2) {
+                // arranca el pellizco: se cancela el arrastre para mirar mientras dura
+                lookActive = false;
+                pinchStartDist = pinchDistance();
+                pinchStartCamDist = camDist;
+            } else if (activeTouches.size === 1) {
+                lookActive = true;
+                lookPointerId = e.pointerId;
+                lookLastX = e.clientX;
+                lookLastY = e.clientY;
+                dragDistance = 0;
+            }
+        });
+        renderer.domElement.addEventListener('pointermove', (e) => {
+            if (!walkMode || !activeTouches.has(e.pointerId)) return;
+            activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (activeTouches.size === 2 && pinchStartDist !== null) {
+                const dist = pinchDistance();
+                const scale = pinchStartDist / dist; // separar los dedos acerca la cámara (achica distancia)
+                camDist = Math.max(CAM_DIST_MIN, Math.min(CAM_DIST_MAX, pinchStartCamDist * scale));
+                return;
+            }
+
+            if (!lookActive || e.pointerId !== lookPointerId) return;
+            const dx = e.clientX - lookLastX;
+            const dy = e.clientY - lookLastY;
+            lookLastX = e.clientX;
+            lookLastY = e.clientY;
+            dragDistance += Math.abs(dx) + Math.abs(dy);
+            camYaw -= dx * LOOK_SENSITIVITY;
+            camPitch = Math.max(-0.7, Math.min(0.85, camPitch - dy * LOOK_SENSITIVITY));
+        });
+        function releaseTouch(e) {
+            activeTouches.delete(e.pointerId);
+            if (activeTouches.size < 2) {
+                pinchStartDist = null;
+                pinchStartCamDist = null;
+            }
+            if (e.pointerId === lookPointerId) { lookActive = false; lookPointerId = null; }
+        }
+        window.addEventListener('pointerup', releaseTouch);
+        window.addEventListener('pointercancel', releaseTouch);
+
+        function updateOldManWalk() {
+            let ix = 0, iz = 0;
+            if (keysPressed['w'] || keysPressed['arrowup']) iz -= 1;
+            if (keysPressed['s'] || keysPressed['arrowdown']) iz += 1;
+            if (keysPressed['a'] || keysPressed['arrowleft']) ix -= 1;
+            if (keysPressed['d'] || keysPressed['arrowright']) ix += 1;
+
+            const joyMag = Math.hypot(joystickX, joystickY);
+            let moveScale = 1;
+            if (joyMag > 0.08) {
+                ix = joystickX;
+                iz = joystickY;
+                moveScale = Math.min(joyMag, 1);
+            }
+
+            // el personaje siempre encara hacia donde apunta la cámara, se mueva o no
+            const forward = getViewForwardFlat();
+            oldMan.rotation.y = Math.atan2(forward.x, forward.z);
+
+            if (ix !== 0 || iz !== 0) {
+                const len = Math.hypot(ix, iz);
+                const nix = ix / len, niz = iz / len;
+                const right = new THREE.Vector3(forward.z, 0, -forward.x);
+                const speed = 0.24 * moveScale;
+
+                const moveX = (forward.x * -niz + right.x * nix) * speed;
+                const moveZ = (forward.z * -niz + right.z * nix) * speed;
+
+                oldMan.position.x = Math.max(-200, Math.min(205, oldMan.position.x + moveX));
+                oldMan.position.z = Math.max(-140, Math.min(140, oldMan.position.z + moveZ));
+
+                animateWalkCycle(performance.now() * 0.012);
+            } else {
+                resetWalkCycle();
+            }
+
+            updateChaseCamera();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (walkMode) {
+                updateOldManWalk();
+                updateWalkLookTarget();
+            } else {
+                updateOldMan();
+                controls.update();
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

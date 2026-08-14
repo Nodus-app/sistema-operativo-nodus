@@ -142,7 +142,10 @@ tr:hover td{background:#0a1515}
       <label style="color:#e0f2f1;cursor:pointer"><input type="checkbox" id="ftipo-backup" checked onchange="onTipoChange()"> Backup</label>
       <label style="color:#e0f2f1;cursor:pointer"><input type="checkbox" id="ftipo-tercero" checked onchange="onTipoChange()"> Terceros</label>
     </div>
-    <button class="btn-salir" onclick="doLogout()">Salir</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="deposito-3d.html" target="_blank" style="display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#00e5cc,#00b39a);color:#042521;font-weight:800;font-size:.8rem;border-radius:8px;padding:7px 14px;text-decoration:none;box-shadow:0 0 14px #00e5cc55;letter-spacing:.01em">&#127981; Mi Dep&oacute;sito 3D</a>
+      <button class="btn-salir" onclick="doLogout()">Salir</button>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab on"  onclick="goTab('cartones',this)">&#x1F4E6; Cartones</button>
