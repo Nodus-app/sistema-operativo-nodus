@@ -737,7 +737,7 @@
         ----------------------------------------------------------------- */
         const CAJAS_POR_PISO_DEFAULT = 5;
         const MAX_PISOS_VISUAL = 10;
-        const STACK_HEIGHT_BUDGET = 1.0;
+        const BOX_W = 0.35, BOX_D = 0.28, BOX_H = 0.22; // caja de cartón real (~35x28x22cm)
         const INST_MAX = 20000;
         const PALLET_INST_MAX = 8000;
         const STRINGER_H = 0.09, DECK_H = 0.025;
@@ -753,13 +753,26 @@
             const canvas = document.createElement('canvas');
             canvas.width = 128; canvas.height = 128;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
+            // base cartón corrugado: no blanco liso, sino textura crema/parda tenue
+            // (el color de vencimiento se aplica encima multiplicando el material)
+            ctx.fillStyle = '#e9e2d0';
             ctx.fillRect(0, 0, 128, 128);
-            ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+            ctx.strokeStyle = 'rgba(90,70,40,0.10)';
+            ctx.lineWidth = 1;
+            for (let y = 4; y < 128; y += 6) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(128, y); ctx.stroke();
+            }
+            // solapa superior (línea de doblez)
+            ctx.strokeStyle = 'rgba(60,45,25,0.28)';
             ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(0, 14); ctx.lineTo(128, 14); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(128, 16); ctx.stroke();
+            // cinta de embalaje al centro
+            ctx.fillStyle = 'rgba(210,195,150,0.55)';
+            ctx.fillRect(56, 0, 16, 128);
+            ctx.strokeStyle = 'rgba(60,45,25,0.28)';
             ctx.beginPath(); ctx.moveTo(64, 0); ctx.lineTo(64, 128); ctx.stroke();
-            ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+            // sombra de solapa inferior
+            ctx.strokeStyle = 'rgba(60,45,25,0.16)';
             ctx.beginPath(); ctx.moveTo(0, 128 - 10); ctx.lineTo(128, 128 - 10); ctx.stroke();
             const tex = new THREE.CanvasTexture(canvas);
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -843,17 +856,18 @@
                 const bucket = bucketParaColor(finalColor);
 
                 const pack = PACKING_ACTUAL[code];
-                const cajasPorPiso = Math.max(1, (pack && pack.cajasPorPiso) || CAJAS_POR_PISO_DEFAULT);
-                const cajasTotales = Math.max(1, (pack && pack.cajas) || cajasPorPiso);
-                const pisos = Math.min(MAX_PISOS_VISUAL, Math.ceil(cajasTotales / cajasPorPiso));
-                const boxH = Math.max(0.09, Math.min(0.32, STACK_HEIGHT_BUDGET / pisos));
+                const cajasTotales = Math.max(1, (pack && pack.cajas) || CAJAS_POR_PISO_DEFAULT);
 
                 const footprintW = 1.2;
                 const footprintD = Math.max(slot.userData.colDepth - 0.5, 0.5);
-                const cols = Math.min(cajasPorPiso, 5);
-                const rows = Math.max(1, Math.ceil(cajasPorPiso / cols));
-                const boxW = (footprintW / cols) * 0.86;
-                const boxD = (footprintD / rows) * 0.86;
+                // Tamaño real de un cartón de picking (~35x28x22cm) — la cantidad de
+                // cajas define cuántas entran por capa y cuántas capas hacen falta,
+                // igual que se estibarían de verdad, en vez de deformar la caja para
+                // que "cajasPorPiso" siempre entre en una sola fila.
+                const cols = Math.max(1, Math.floor(footprintW / BOX_W));
+                const rows = Math.max(1, Math.floor(footprintD / BOX_D));
+                const porCapa = cols * rows;
+                const pisos = Math.min(MAX_PISOS_VISUAL, Math.max(1, Math.ceil(cajasTotales / porCapa)));
 
                 if (nStringer.n + 3 <= PALLET_INST_MAX && nDeck.n + 5 <= PALLET_INST_MAX) {
                     placePalletBase(slot.position.x, slot.position.z, footprintW, footprintD, slot.userData.shelfTop + 0.04, nStringer, nDeck);
@@ -862,15 +876,15 @@
 
                 let restantes = cajasTotales;
                 for (let piso = 0; piso < pisos && restantes > 0; piso++) {
-                    const y = stackBase + boxH / 2 + piso * boxH;
+                    const y = stackBase + BOX_H / 2 + piso * BOX_H;
                     for (let r = 0; r < rows && restantes > 0; r++) {
                         for (let c = 0; c < cols && restantes > 0; c++) {
                             restantes--;
-                            const px = slot.position.x + (c - (cols - 1) / 2) * (footprintW / cols);
-                            const pz = slot.position.z + (r - (rows - 1) / 2) * (footprintD / rows);
+                            const px = slot.position.x + (c - (cols - 1) / 2) * BOX_W;
+                            const pz = slot.position.z + (r - (rows - 1) / 2) * BOX_D;
                             _dummy.position.set(px, y, pz);
                             _dummy.rotation.set(0, 0, 0);
-                            _dummy.scale.set(boxW, boxH * 0.88, boxD);
+                            _dummy.scale.set(BOX_W * 0.92, BOX_H * 0.9, BOX_D * 0.92);
                             _dummy.updateMatrix();
                             if (bucket === instRojo) bucket.setMatrixAt(nRojo++, _dummy.matrix);
                             else if (bucket === instAmarillo) bucket.setMatrixAt(nAmarillo++, _dummy.matrix);
