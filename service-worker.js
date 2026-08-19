@@ -39,6 +39,9 @@ self.addEventListener('fetch', e => {
     url.hostname.includes('cdnjs.cloudflare.com')
   ) return;
 
+  // datos vivos (stock-deposito.json, etc.): nunca servir desde cache, siempre red
+  if (url.pathname.endsWith('.json')) return;
+
   if (e.request.destination === 'document' || url.pathname.endsWith('.html')) {
     e.respondWith(
       fetch(e.request)
